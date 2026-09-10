@@ -35,14 +35,22 @@ func scanBill(row interface{ Scan(dest ...any) error }) (models.Bill, error) {
 	return b, err
 }
 
-// EnsureForPeriod creates a blank (unpaid, no readings) bill row for a room in
-// a period if one doesn't already exist, carrying the previous period's
-// "current" readings forward as this period's "previous" readings.
+// EnsureForPeriod creates a blank bill row for a room in a period if one
+// doesn't already exist, carrying the previous period's "current" readings
+// forward as this period's "previous" readings. A room still marked vacant
+// (via /vacate, not yet reoccupied with /movein) gets a no_charge bill
+// automatically instead of an unpaid one.
 func (s *BillStore) EnsureForPeriod(room models.Room, periodID int64, prevWater, prevElec float64) error {
+	status := models.BillStatusUnpaid
+	notes := ""
+	if room.IsVacant {
+		status = models.BillStatusNoCharge
+		notes = "vacant"
+	}
 	_, err := s.db.Exec(`
-		INSERT OR IGNORE INTO bills (room_id, period_id, rent_usd, water_prev, elec_prev, status)
-		VALUES (?, ?, ?, ?, ?, 'unpaid')`,
-		room.ID, periodID, room.BaseRentUSD, prevWater, prevElec)
+		INSERT OR IGNORE INTO bills (room_id, period_id, rent_usd, water_prev, elec_prev, status, notes)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		room.ID, periodID, room.BaseRentUSD, prevWater, prevElec, status, notes)
 	return err
 }
 
@@ -98,6 +106,23 @@ func (s *BillStore) GetByID(id int64) (models.Bill, error) {
 // used by the service layer after recomputing status from logged payments.
 func (s *BillStore) SetStatus(id int64, status models.BillStatus, paidAt *time.Time) error {
 	_, err := s.db.Exec(`UPDATE bills SET status = ?, paid_at = ? WHERE id = ?`, status, paidAt, id)
+	return err
+}
+
+// SetOccupancy resets a bill back to unpaid with the given days-stayed —
+// used by /vacate and /movein to auto-prorate the day a tenant leaves or
+// arrives.
+func (s *BillStore) SetOccupancy(id int64, daysStayed int) error {
+	_, err := s.db.Exec(`UPDATE bills SET days_stayed = ?, status = 'unpaid', notes = '' WHERE id = ?`, daysStayed, id)
+	return err
+}
+
+// SetPreviousReadings overwrites a bill's starting (previous) meter readings
+// without touching its status or totals — used by /movein to record a new
+// tenant's baseline; the bill itself still gets computed later, once their
+// current readings are known at the normal /billing pass.
+func (s *BillStore) SetPreviousReadings(id int64, waterPrev, elecPrev float64) error {
+	_, err := s.db.Exec(`UPDATE bills SET water_prev = ?, elec_prev = ? WHERE id = ?`, waterPrev, elecPrev, id)
 	return err
 }
 

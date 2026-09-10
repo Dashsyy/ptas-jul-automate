@@ -17,21 +17,38 @@ func NewPendingStore(db *sql.DB) *PendingStore {
 
 func (s *PendingStore) Get(chatID int64) (models.PendingAction, error) {
 	var p models.PendingAction
+	var billID, roomID sql.NullInt64
 	err := s.db.QueryRow(`
-		SELECT chat_id, kind, bill_id, step, payload, updated_at
+		SELECT chat_id, kind, bill_id, room_id, step, payload, updated_at
 		FROM pending_actions WHERE chat_id = ?`, chatID).
-		Scan(&p.ChatID, &p.Kind, &p.BillID, &p.Step, &p.Payload, &p.UpdatedAt)
-	return p, err
+		Scan(&p.ChatID, &p.Kind, &billID, &roomID, &p.Step, &p.Payload, &p.UpdatedAt)
+	if err != nil {
+		return p, err
+	}
+	if billID.Valid {
+		p.BillID = &billID.Int64
+	}
+	if roomID.Valid {
+		p.RoomID = &roomID.Int64
+	}
+	return p, nil
 }
 
 func (s *PendingStore) Set(p models.PendingAction) error {
+	var billID, roomID any
+	if p.BillID != nil {
+		billID = *p.BillID
+	}
+	if p.RoomID != nil {
+		roomID = *p.RoomID
+	}
 	_, err := s.db.Exec(`
-		INSERT INTO pending_actions (chat_id, kind, bill_id, step, payload, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
+		INSERT INTO pending_actions (chat_id, kind, bill_id, room_id, step, payload, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(chat_id) DO UPDATE SET
-			kind = excluded.kind, bill_id = excluded.bill_id,
+			kind = excluded.kind, bill_id = excluded.bill_id, room_id = excluded.room_id,
 			step = excluded.step, payload = excluded.payload, updated_at = excluded.updated_at`,
-		p.ChatID, p.Kind, p.BillID, p.Step, p.Payload, time.Now())
+		p.ChatID, p.Kind, billID, roomID, p.Step, p.Payload, time.Now())
 	return err
 }
 

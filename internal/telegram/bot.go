@@ -97,7 +97,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		return
 	}
 
-	done, out, err := b.svc.SubmitReadingValue(chatID, value)
+	_, out, err := b.svc.SubmitReadingValue(chatID, value)
 	if err != nil {
 		if err == service.ErrNoPendingReading {
 			return
@@ -105,11 +105,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		b.reply(chatID, "Error: "+err.Error())
 		return
 	}
-	if done {
-		b.reply(chatID, "✅ Bill saved.\n\n"+out)
-	} else {
-		b.reply(chatID, out)
-	}
+	b.reply(chatID, out)
 }
 
 func (b *Bot) handleCommand(chatID int64, cmd, args string) {
@@ -137,6 +133,12 @@ func (b *Bot) handleCommand(chatID int64, cmd, args string) {
 
 	case "setname":
 		b.doSetName(chatID, args)
+
+	case "vacate":
+		b.doVacate(chatID, strings.TrimSpace(args))
+
+	case "movein":
+		b.doMoveIn(chatID, args)
 
 	case "cancel":
 		_ = b.svc.CancelPending(chatID)
@@ -220,7 +222,10 @@ func (b *Bot) sendRoomList(chatID int64) {
 	for _, r := range rooms {
 		floorBreaker(&sb, &lastFloor, r.Floor)
 		name := r.TenantName
-		if name == "" {
+		switch {
+		case r.IsVacant:
+			name = "🚪 VACANT"
+		case name == "":
 			name = "(unnamed)"
 		}
 		fmt.Fprintf(&sb, "#%d — %s — $%.0f/mo\n", r.Number, name, r.BaseRentUSD)
@@ -259,6 +264,14 @@ func (b *Bot) sendUnpaidList(chatID int64) {
 // shared by /status, the @mention query, and /pay's confirmation.
 func formatBillStatus(bl models.Bill) string {
 	switch {
+	// no_charge is checked before the "readings not entered" case: a vacant
+	// room will never get readings entered (nobody's there using water or
+	// electricity), so it would otherwise show "readings not entered"
+	// forever instead of its actual vacant/no-charge state.
+	case bl.Status == models.BillStatusNoCharge && bl.Notes == "vacant":
+		return fmt.Sprintf("🚪 Room %d — Vacant", bl.RoomNumber)
+	case bl.Status == models.BillStatusNoCharge:
+		return fmt.Sprintf("➖ Room %d — No charge", bl.RoomNumber)
 	case bl.WaterCurr == nil:
 		return fmt.Sprintf("⏳ Room %d — readings not entered", bl.RoomNumber)
 	case bl.Status == models.BillStatusPaid:
@@ -267,8 +280,6 @@ func formatBillStatus(bl models.Bill) string {
 				bl.RoomNumber, bl.TotalUSD, bl.PaidUSD, extra)
 		}
 		return fmt.Sprintf("✅ Room %d — Paid ($%.2f)", bl.RoomNumber, bl.TotalUSD)
-	case bl.Status == models.BillStatusNoCharge:
-		return fmt.Sprintf("➖ Room %d — No charge", bl.RoomNumber)
 	case bl.Status == models.BillStatusPartial:
 		return fmt.Sprintf("🟡 Room %d — Partial ($%.2f of $%.2f, owes $%.2f)",
 			bl.RoomNumber, bl.PaidUSD, bl.TotalUSD, bl.TotalUSD-bl.PaidUSD)
@@ -360,6 +371,34 @@ func (b *Bot) doSetName(chatID int64, args string) {
 	b.reply(chatID, fmt.Sprintf("Room %d name set to %q.", roomNumber, parts[1]))
 }
 
+func (b *Bot) doVacate(chatID int64, args string) {
+	roomNumber, err := strconv.Atoi(strings.TrimSpace(args))
+	if err != nil {
+		b.reply(chatID, "Usage: /vacate <room#>")
+		return
+	}
+	msg, err := b.svc.StartVacateEntry(chatID, roomNumber)
+	if err != nil {
+		b.reply(chatID, unwrapFriendly(err))
+		return
+	}
+	b.reply(chatID, msg)
+}
+
+func (b *Bot) doMoveIn(chatID int64, args string) {
+	roomNumber, err := strconv.Atoi(strings.TrimSpace(args))
+	if err != nil {
+		b.reply(chatID, "Usage: /movein <room#>")
+		return
+	}
+	msg, err := b.svc.StartMoveIn(chatID, roomNumber)
+	if err != nil {
+		b.reply(chatID, unwrapFriendly(err))
+		return
+	}
+	b.reply(chatID, msg)
+}
+
 func (b *Bot) doPay(chatID int64, args string) {
 	parts := strings.Fields(strings.TrimSpace(args))
 	if len(parts) != 2 {
@@ -414,6 +453,8 @@ const helpText = `PTAS billing bot
 /newmonth YYYY-MM - open a new billing period
 /rooms     - list all rooms
 /setname <room#> <name> - set a room's tenant name
+/vacate <room#> - tenant moving out: auto-prorates to today, asks for final readings, then marks vacant
+/movein <room#> - tenant moving in: auto-prorates the rest of the period, asks for starting readings
 /cancel    - cancel an in-progress reading entry
 
 In a group, mention me for a read-only room lookup:

@@ -8,6 +8,7 @@ type Room struct {
 	Floor       int
 	TenantName  string
 	BaseRentUSD float64
+	IsVacant    bool
 }
 
 type BillingPeriod struct {
@@ -63,13 +64,17 @@ type Payment struct {
 	PaidAt    time.Time
 }
 
-// PendingAction tracks a multi-step conversation (e.g. entering meter readings)
-// per chat, so it survives process restarts.
+// PendingAction tracks a multi-step conversation (e.g. entering meter
+// readings, or a bare "/pay" walking through room-then-amount) per chat, so
+// it survives process restarts. BillID and RoomID are both optional — which
+// one (if either) is set depends on Kind: reading/payment flows anchor to a
+// bill, /setname and /newmonth flows may only need a room or nothing at all.
 type PendingAction struct {
 	ChatID    int64
-	Kind      string // "enter_readings"
-	BillID    int64
-	Step      string // "await_water", "await_elec"
+	Kind      string // "enter_readings", "pay_amount", "setname_text", ...
+	BillID    *int64
+	RoomID    *int64
+	Step      string
 	Payload   string // JSON blob for partially collected data
 	UpdatedAt time.Time
 }
