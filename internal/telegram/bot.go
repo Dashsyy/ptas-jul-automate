@@ -4,6 +4,8 @@
 package telegram
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -11,6 +13,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"ptas-bot/internal/models"
 	"ptas-bot/internal/service"
 )
 
@@ -25,13 +28,14 @@ type Sender interface {
 }
 
 type Bot struct {
-	api     Sender
-	svc     *service.Service
-	ownerID int64
+	api      Sender
+	svc      *service.Service
+	ownerID  int64
+	username string // without "@", used to detect @mentions in group chats
 }
 
-func New(api Sender, svc *service.Service, ownerID int64) *Bot {
-	return &Bot{api: api, svc: svc, ownerID: ownerID}
+func New(api Sender, svc *service.Service, ownerID int64, username string) *Bot {
+	return &Bot{api: api, svc: svc, ownerID: ownerID, username: username}
 }
 
 // HandleUpdate is the single entry point used by both the webhook HTTP
@@ -49,29 +53,36 @@ func (b *Bot) HandleUpdate(update tgbotapi.Update) {
 	}
 }
 
-// authorized restricts every mutating command to a private DM from the
-// configured owner. Group messages (e.g. future PayWay ingestion) are
-// handled separately and aren't gated here.
+// authorized restricts every command, callback, and @mention to the
+// configured owner's Telegram user ID — full commands only work in a private
+// DM (see handleMessage), but the @mention status query is also allowed from
+// group chats (e.g. the ABA PayWay notifications group) since it's read-only
+// and still gated to this same user ID.
 func (b *Bot) authorized(update tgbotapi.Update) bool {
 	var userID int64
-	var chatType string
 	switch {
 	case update.Message != nil:
 		userID = update.Message.From.ID
-		chatType = update.Message.Chat.Type
 	case update.CallbackQuery != nil:
 		userID = update.CallbackQuery.From.ID
-		if update.CallbackQuery.Message != nil {
-			chatType = update.CallbackQuery.Message.Chat.Type
-		}
 	default:
 		return false
 	}
-	return userID == b.ownerID && chatType == "private"
+	return userID == b.ownerID
 }
 
 func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
+
+	if msg.Chat.Type != "private" {
+		// Outside a DM, the only thing we act on is an @mention query
+		// (e.g. "@mybot room:4 status") — everything else, including the
+		// PayWay bot's own notifications, is ignored here.
+		if query, ok := b.mentionQuery(msg); ok {
+			b.handleMention(chatID, query)
+		}
+		return
+	}
 
 	if msg.IsCommand() {
 		b.handleCommand(chatID, msg.Command(), msg.CommandArguments())
@@ -112,11 +123,17 @@ func (b *Bot) handleCommand(chatID int64, cmd, args string) {
 	case "unpaid":
 		b.sendUnpaidList(chatID)
 
+	case "status":
+		b.sendStatusOverview(chatID)
+
 	case "billing":
 		b.sendMissingReadingsList(chatID)
 
 	case "newmonth":
 		b.doNewMonth(chatID, strings.TrimSpace(args))
+
+	case "pay":
+		b.doPay(chatID, args)
 
 	case "setname":
 		b.doSetName(chatID, args)
@@ -150,7 +167,7 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 			b.reply(chatID, "Error: "+err.Error())
 			return
 		}
-		b.reply(chatID, fmt.Sprintf("✅ Room %d marked paid ($%.2f).", bill.RoomNumber, bill.TotalUSD))
+		b.reply(chatID, "✅ Settled in full.\n"+formatBillStatus(bill))
 
 	case strings.HasPrefix(data, "bill:"):
 		roomNumber, err := strconv.Atoi(strings.TrimPrefix(data, "bill:"))
@@ -166,6 +183,32 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 	}
 }
 
+// floorBreaker writes a "— Floor N —" divider into sb whenever floor differs
+// from *lastFloor (including before the very first room), mirroring the
+// spreadsheet's per-floor sections.
+func floorBreaker(sb *strings.Builder, lastFloor *int, floor int) {
+	if floor == *lastFloor {
+		return
+	}
+	fmt.Fprintf(sb, "— Floor %d —\n", floor)
+	*lastFloor = floor
+}
+
+// floorBreakerRow is floorBreaker for inline-keyboard listings: it returns a
+// single-button divider row (tapping it does nothing — "noop" matches no
+// callback prefix in handleCallback) whenever floor changes.
+func floorBreakerRow(lastFloor *int, floor int) [][]tgbotapi.InlineKeyboardButton {
+	if floor == *lastFloor {
+		return nil
+	}
+	*lastFloor = floor
+	return [][]tgbotapi.InlineKeyboardButton{
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("— Floor %d —", floor), "noop"),
+		),
+	}
+}
+
 func (b *Bot) sendRoomList(chatID int64) {
 	rooms, err := b.svc.ListRooms()
 	if err != nil {
@@ -173,8 +216,9 @@ func (b *Bot) sendRoomList(chatID int64) {
 		return
 	}
 	var sb strings.Builder
-	sb.WriteString("Rooms:\n")
+	lastFloor := 0
 	for _, r := range rooms {
+		floorBreaker(&sb, &lastFloor, r.Floor)
 		name := r.TenantName
 		if name == "" {
 			name = "(unnamed)"
@@ -196,15 +240,68 @@ func (b *Bot) sendUnpaidList(chatID int64) {
 	}
 
 	var rows [][]tgbotapi.InlineKeyboardButton
+	lastFloor := 0
 	for _, bl := range bills {
-		label := fmt.Sprintf("Room %d — $%.2f", bl.RoomNumber, bl.TotalUSD)
+		rows = append(rows, floorBreakerRow(&lastFloor, bl.RoomFloor)...)
+		amount := bl.TotalUSD - bl.PaidUSD
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("paid:%d", bl.ID)),
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("Room %d — $%.2f", bl.RoomNumber, amount),
+				fmt.Sprintf("paid:%d", bl.ID)),
 		))
 	}
-	msg := tgbotapi.NewMessage(chatID, "Tap a room to mark it paid:")
+	msg := tgbotapi.NewMessage(chatID, "Tap a room to settle it in full (use /pay for a partial amount):")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
+}
+
+// formatBillStatus renders one bill's payment status as a single line —
+// shared by /status, the @mention query, and /pay's confirmation.
+func formatBillStatus(bl models.Bill) string {
+	switch {
+	case bl.WaterCurr == nil:
+		return fmt.Sprintf("⏳ Room %d — readings not entered", bl.RoomNumber)
+	case bl.Status == models.BillStatusPaid:
+		if extra := bl.PaidUSD - bl.TotalUSD; extra > 0.01 {
+			return fmt.Sprintf("✅ Room %d — Paid ($%.2f due, $%.2f received, $%.2f extra)",
+				bl.RoomNumber, bl.TotalUSD, bl.PaidUSD, extra)
+		}
+		return fmt.Sprintf("✅ Room %d — Paid ($%.2f)", bl.RoomNumber, bl.TotalUSD)
+	case bl.Status == models.BillStatusNoCharge:
+		return fmt.Sprintf("➖ Room %d — No charge", bl.RoomNumber)
+	case bl.Status == models.BillStatusPartial:
+		return fmt.Sprintf("🟡 Room %d — Partial ($%.2f of $%.2f, owes $%.2f)",
+			bl.RoomNumber, bl.PaidUSD, bl.TotalUSD, bl.TotalUSD-bl.PaidUSD)
+	default:
+		return fmt.Sprintf("❌ Room %d — Unpaid ($%.2f)", bl.RoomNumber, bl.TotalUSD)
+	}
+}
+
+func (b *Bot) sendStatusOverview(chatID int64) {
+	bills, err := b.svc.AllBills()
+	if err != nil {
+		b.reply(chatID, unwrapFriendly(err))
+		return
+	}
+	if len(bills) == 0 {
+		b.reply(chatID, "No rooms in the current period yet.")
+		return
+	}
+
+	var sb strings.Builder
+	lastFloor := 0
+	paidCount := 0
+	for _, bl := range bills {
+		floorBreaker(&sb, &lastFloor, bl.RoomFloor)
+		if bl.Status == models.BillStatusPaid {
+			paidCount++
+		}
+		sb.WriteString(formatBillStatus(bl))
+		sb.WriteString("\n")
+	}
+	fmt.Fprintf(&sb, "\n%d/%d rooms paid.", paidCount, len(bills))
+
+	b.reply(chatID, sb.String())
 }
 
 func (b *Bot) sendMissingReadingsList(chatID int64) {
@@ -219,7 +316,9 @@ func (b *Bot) sendMissingReadingsList(chatID int64) {
 	}
 
 	var rows [][]tgbotapi.InlineKeyboardButton
+	lastFloor := 0
 	for _, bl := range bills {
+		rows = append(rows, floorBreakerRow(&lastFloor, bl.RoomFloor)...)
 		label := fmt.Sprintf("Room %d", bl.RoomNumber)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("bill:%d", bl.RoomNumber)),
@@ -261,9 +360,37 @@ func (b *Bot) doSetName(chatID int64, args string) {
 	b.reply(chatID, fmt.Sprintf("Room %d name set to %q.", roomNumber, parts[1]))
 }
 
+func (b *Bot) doPay(chatID int64, args string) {
+	parts := strings.Fields(strings.TrimSpace(args))
+	if len(parts) != 2 {
+		b.reply(chatID, "Usage: /pay <room#> <amount>")
+		return
+	}
+	roomNumber, err := strconv.Atoi(parts[0])
+	if err != nil {
+		b.reply(chatID, "Room number must be an integer.")
+		return
+	}
+	amount, err := strconv.ParseFloat(parts[1], 64)
+	if err != nil {
+		b.reply(chatID, "Amount must be a number.")
+		return
+	}
+
+	bill, err := b.svc.PayRoom(roomNumber, amount)
+	if err != nil {
+		b.reply(chatID, unwrapFriendly(err))
+		return
+	}
+	b.reply(chatID, fmt.Sprintf("💵 Logged $%.2f for Room %d.\n%s", amount, roomNumber, formatBillStatus(bill)))
+}
+
 func unwrapFriendly(err error) string {
 	if err == service.ErrNoActivePeriod {
 		return "No billing period yet — run /newmonth 2026-09 first."
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return "Room not found."
 	}
 	return "Error: " + err.Error()
 }
@@ -280,9 +407,14 @@ func (b *Bot) send(msg tgbotapi.MessageConfig) {
 
 const helpText = `PTAS billing bot
 
-/unpaid    - show unpaid rooms this period, tap to mark paid
+/status    - show every room's payment status this period
+/unpaid    - show unpaid/partial rooms, tap to settle in full
+/pay <room#> <amount> - log a partial or full payment
 /billing   - show rooms missing readings, tap to enter them
 /newmonth YYYY-MM - open a new billing period
 /rooms     - list all rooms
 /setname <room#> <name> - set a room's tenant name
-/cancel    - cancel an in-progress reading entry`
+/cancel    - cancel an in-progress reading entry
+
+In a group, mention me for a read-only room lookup:
+@<bot username> room:4 status`

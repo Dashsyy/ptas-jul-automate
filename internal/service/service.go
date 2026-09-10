@@ -21,23 +21,30 @@ import (
 var ErrNoActivePeriod = errors.New("no active billing period — run NewMonth first")
 var ErrNoPendingReading = errors.New("no reading in progress for this chat")
 
+// paymentEpsilon absorbs float rounding (e.g. a $71.125 bill stored as
+// 71.12999999) so a payment for the full display amount is never left
+// dangling in "partial" by a fraction of a cent.
+const paymentEpsilon = 0.005
+
 type Service struct {
-	rooms   *store.RoomStore
-	periods *store.PeriodStore
-	bills   *store.BillStore
-	pending *store.PendingStore
-	rates   billing.Rates
-	loc     *time.Location
+	rooms    *store.RoomStore
+	periods  *store.PeriodStore
+	bills    *store.BillStore
+	pending  *store.PendingStore
+	payments *store.PaymentStore
+	rates    billing.Rates
+	loc      *time.Location
 }
 
 func New(db *sql.DB, rates billing.Rates, loc *time.Location) *Service {
 	return &Service{
-		rooms:   store.NewRoomStore(db),
-		periods: store.NewPeriodStore(db),
-		bills:   store.NewBillStore(db),
-		pending: store.NewPendingStore(db),
-		rates:   rates,
-		loc:     loc,
+		rooms:    store.NewRoomStore(db),
+		periods:  store.NewPeriodStore(db),
+		bills:    store.NewBillStore(db),
+		pending:  store.NewPendingStore(db),
+		payments: store.NewPaymentStore(db),
+		rates:    rates,
+		loc:      loc,
 	}
 }
 
@@ -104,11 +111,21 @@ func (s *Service) UnpaidBills() ([]models.Bill, error) {
 
 	var unpaid []models.Bill
 	for _, b := range all {
-		if b.Status == models.BillStatusUnpaid {
+		if b.Status == models.BillStatusUnpaid || b.Status == models.BillStatusPartial {
 			unpaid = append(unpaid, b)
 		}
 	}
 	return unpaid, nil
+}
+
+// AllBills lists every room's bill in the current period, in room-number
+// order, regardless of status — for a full paid/unpaid overview.
+func (s *Service) AllBills() ([]models.Bill, error) {
+	period, err := s.CurrentPeriod()
+	if err != nil {
+		return nil, err
+	}
+	return s.bills.ListForPeriod(period.ID)
 }
 
 // RoomsMissingReadings lists bills in the current period that haven't had
@@ -132,11 +149,86 @@ func (s *Service) RoomsMissingReadings() ([]models.Bill, error) {
 	return missing, nil
 }
 
-func (s *Service) MarkPaid(billID int64) (models.Bill, error) {
-	if err := s.bills.MarkPaid(billID); err != nil {
+// RecordPayment logs a payment toward a bill and recomputes its status
+// (unpaid -> partial -> paid) from the running total of payments logged
+// against it. Returns the updated bill.
+func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (models.Bill, error) {
+	if amountUSD <= 0 {
+		return models.Bill{}, fmt.Errorf("payment amount must be positive")
+	}
+
+	bill, err := s.bills.GetByID(billID)
+	if err != nil {
+		return models.Bill{}, err
+	}
+	if bill.Status == models.BillStatusNoCharge {
+		return models.Bill{}, fmt.Errorf("room %d is marked no-charge — no payment expected", bill.RoomNumber)
+	}
+
+	if err := s.payments.Add(billID, amountUSD, note); err != nil {
+		return models.Bill{}, err
+	}
+
+	paidTotal, err := s.payments.TotalForBill(billID)
+	if err != nil {
+		return models.Bill{}, err
+	}
+
+	var status models.BillStatus
+	var paidAt *time.Time
+	switch {
+	case paidTotal+paymentEpsilon >= bill.TotalUSD:
+		status = models.BillStatusPaid
+		now := time.Now()
+		paidAt = &now
+	case paidTotal > 0:
+		status = models.BillStatusPartial
+	default:
+		status = models.BillStatusUnpaid
+	}
+
+	if err := s.bills.SetStatus(billID, status, paidAt); err != nil {
 		return models.Bill{}, err
 	}
 	return s.bills.GetByID(billID)
+}
+
+// MarkPaid settles whatever remains on a bill in a single payment — the
+// /unpaid tap-to-pay shortcut for the common "paid in full" case.
+func (s *Service) MarkPaid(billID int64) (models.Bill, error) {
+	bill, err := s.bills.GetByID(billID)
+	if err != nil {
+		return models.Bill{}, err
+	}
+	remaining := bill.TotalUSD - bill.PaidUSD
+	if remaining <= paymentEpsilon {
+		return bill, nil
+	}
+	return s.RecordPayment(billID, remaining, "settled in full via /unpaid")
+}
+
+// RoomStatus fetches a room's bill for the current period by room number —
+// used by /pay and the @mention status query.
+func (s *Service) RoomStatus(roomNumber int) (models.Bill, error) {
+	room, err := s.rooms.GetByNumber(roomNumber)
+	if err != nil {
+		return models.Bill{}, err
+	}
+	period, err := s.CurrentPeriod()
+	if err != nil {
+		return models.Bill{}, err
+	}
+	return s.bills.GetByRoomPeriod(room.ID, period.ID)
+}
+
+// PayRoom records a payment against a room's current-period bill by room
+// number — the entry point for /pay <room#> <amount>.
+func (s *Service) PayRoom(roomNumber int, amountUSD float64) (models.Bill, error) {
+	bill, err := s.RoomStatus(roomNumber)
+	if err != nil {
+		return models.Bill{}, err
+	}
+	return s.RecordPayment(bill.ID, amountUSD, "")
 }
 
 func (s *Service) GetBill(billID int64) (models.Bill, error) {

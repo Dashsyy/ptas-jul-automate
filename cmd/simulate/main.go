@@ -56,7 +56,7 @@ func main() {
 	}, loc)
 
 	sender := newFakeSender()
-	bot := telegram.New(sender, svc, simOwnerID)
+	bot := telegram.New(sender, svc, simOwnerID, "simbot")
 
 	html, err := fs.Sub(staticFiles, "static")
 	if err != nil {

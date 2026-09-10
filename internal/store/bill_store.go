@@ -20,7 +20,8 @@ const billSelectCols = `
 	b.water_prev, b.water_curr, b.water_used, b.water_cost_riel,
 	b.elec_prev, b.elec_curr, b.elec_used, b.elec_cost_riel,
 	b.extra_charge_usd, b.total_riel, b.total_usd, b.status, b.notes, b.paid_at,
-	r.number, r.tenant_name`
+	r.number, r.floor, r.tenant_name,
+	COALESCE((SELECT SUM(amount_usd) FROM payments WHERE bill_id = b.id), 0)`
 
 func scanBill(row interface{ Scan(dest ...any) error }) (models.Bill, error) {
 	var b models.Bill
@@ -29,7 +30,7 @@ func scanBill(row interface{ Scan(dest ...any) error }) (models.Bill, error) {
 		&b.WaterPrev, &b.WaterCurr, &b.WaterUsed, &b.WaterCostRiel,
 		&b.ElecPrev, &b.ElecCurr, &b.ElecUsed, &b.ElecCostRiel,
 		&b.ExtraChargeUSD, &b.TotalRiel, &b.TotalUSD, &b.Status, &b.Notes, &b.PaidAt,
-		&b.RoomNumber, &b.TenantName,
+		&b.RoomNumber, &b.RoomFloor, &b.TenantName, &b.PaidUSD,
 	)
 	return b, err
 }
@@ -93,8 +94,10 @@ func (s *BillStore) GetByID(id int64) (models.Bill, error) {
 	return scanBill(row)
 }
 
-func (s *BillStore) MarkPaid(id int64) error {
-	_, err := s.db.Exec(`UPDATE bills SET status = 'paid', paid_at = ? WHERE id = ?`, time.Now(), id)
+// SetStatus updates a bill's status (and paid_at, when settling in full) —
+// used by the service layer after recomputing status from logged payments.
+func (s *BillStore) SetStatus(id int64, status models.BillStatus, paidAt *time.Time) error {
+	_, err := s.db.Exec(`UPDATE bills SET status = ?, paid_at = ? WHERE id = ?`, status, paidAt, id)
 	return err
 }
 

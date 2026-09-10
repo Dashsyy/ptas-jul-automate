@@ -20,6 +20,7 @@ type BillStatus string
 
 const (
 	BillStatusUnpaid   BillStatus = "unpaid"
+	BillStatusPartial  BillStatus = "partial"
 	BillStatusPaid     BillStatus = "paid"
 	BillStatusNoCharge BillStatus = "no_charge"
 )
@@ -45,9 +46,21 @@ type Bill struct {
 	Notes          string
 	PaidAt         *time.Time
 
-	// populated by joins, not persisted directly on this table
+	// populated by joins/aggregates, not persisted directly on this table
 	RoomNumber int
+	RoomFloor  int
 	TenantName string
+	PaidUSD    float64 // sum of payments logged against this bill
+}
+
+// Payment is one payment logged toward a bill — a bill can have several,
+// which is what makes split/partial payments possible.
+type Payment struct {
+	ID        int64
+	BillID    int64
+	AmountUSD float64
+	Note      string
+	PaidAt    time.Time
 }
 
 // PendingAction tracks a multi-step conversation (e.g. entering meter readings)

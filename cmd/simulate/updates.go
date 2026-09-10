@@ -16,11 +16,22 @@ func nextID() int {
 // buildMessageUpdate mimics what Telegram would send for a plain text message
 // or a "/command args" message from the simulated owner, including the
 // bot_command entity real commands rely on for Message.IsCommand()/Command().
+//
+// Text starting with "@" is treated as a message from a group chat instead
+// of the private DM, so typing e.g. "@simbot room:4 status" in the same
+// chat box exercises the group @mention code path — the only thing that
+// differs from real Telegram is how the chat type gets set, not how Bot
+// handles the update.
 func buildMessageUpdate(chatID, userID int64, text string) tgbotapi.Update {
+	chatType := "private"
+	if strings.HasPrefix(text, "@") {
+		chatType = "group"
+	}
+
 	msg := &tgbotapi.Message{
 		MessageID: nextID(),
 		From:      &tgbotapi.User{ID: userID, FirstName: "You"},
-		Chat:      &tgbotapi.Chat{ID: chatID, Type: "private"},
+		Chat:      &tgbotapi.Chat{ID: chatID, Type: chatType},
 		Text:      text,
 	}
 

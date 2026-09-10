@@ -43,7 +43,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("telegram: %v", err)
 	}
-	bot := telegram.New(api, svc, cfg.OwnerID)
+	bot := telegram.New(api, svc, cfg.OwnerID, api.Self.UserName)
 	log.Printf("authorized as @%s", api.Self.UserName)
 
 	router := gin.Default()
