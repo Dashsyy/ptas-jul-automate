@@ -45,6 +45,9 @@ func main() {
 	}
 	bot := telegram.New(api, svc, cfg.OwnerID, api.Self.UserName)
 	log.Printf("authorized as @%s", api.Self.UserName)
+	if err := bot.RegisterCommands(); err != nil {
+		log.Printf("register commands: %v", err)
+	}
 
 	router := gin.Default()
 	router.GET("/health", func(c *gin.Context) {

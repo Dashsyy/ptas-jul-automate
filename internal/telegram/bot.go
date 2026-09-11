@@ -38,6 +38,31 @@ func New(api Sender, svc *service.Service, ownerID int64, username string) *Bot 
 	return &Bot{api: api, svc: svc, ownerID: ownerID, username: username}
 }
 
+// commandList is registered with Telegram via setMyCommands so typing "/" in
+// the chat shows this as an autocomplete menu — the same discovery
+// mechanism BotFather itself relies on.
+var commandList = []tgbotapi.BotCommand{
+	{Command: "start", Description: "Open the main menu"},
+	{Command: "status", Description: "Every room's payment status this period"},
+	{Command: "unpaid", Description: "Unpaid/partial rooms, tap to settle"},
+	{Command: "pay", Description: "Log a payment"},
+	{Command: "billing", Description: "Rooms missing meter readings"},
+	{Command: "rooms", Description: "List all rooms"},
+	{Command: "setname", Description: "Set a room's tenant name"},
+	{Command: "vacate", Description: "Tenant moving out"},
+	{Command: "movein", Description: "Tenant moving in"},
+	{Command: "newmonth", Description: "Open a new billing period"},
+	{Command: "cancel", Description: "Cancel an in-progress action"},
+	{Command: "help", Description: "Full command reference"},
+}
+
+// RegisterCommands pushes commandList to Telegram. Call it once at startup;
+// it's harmless (and cheap) to call again on every restart.
+func (b *Bot) RegisterCommands() error {
+	_, err := b.api.Request(tgbotapi.NewSetMyCommands(commandList...))
+	return err
+}
+
 // HandleUpdate is the single entry point used by both the webhook HTTP
 // handler and the long-polling loop.
 func (b *Bot) HandleUpdate(update tgbotapi.Update) {
@@ -110,7 +135,10 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 
 func (b *Bot) handleCommand(chatID int64, cmd, args string) {
 	switch cmd {
-	case "start", "help":
+	case "start":
+		b.showMainMenu(chatID)
+
+	case "help":
 		b.reply(chatID, helpText)
 
 	case "rooms":
@@ -157,6 +185,10 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 
 	chatID := cb.Message.Chat.ID
 	data := cb.Data
+
+	if b.handleMenuCallback(chatID, data) {
+		return
+	}
 
 	switch {
 	case strings.HasPrefix(data, "paid:"):
@@ -342,7 +374,12 @@ func (b *Bot) sendMissingReadingsList(chatID int64) {
 
 func (b *Bot) doNewMonth(chatID int64, label string) {
 	if label == "" {
-		b.reply(chatID, "Usage: /newmonth 2026-09")
+		msg, err := b.svc.StartNewMonthFlow(chatID)
+		if err != nil {
+			b.reply(chatID, "Error: "+err.Error())
+			return
+		}
+		b.reply(chatID, msg)
 		return
 	}
 	count, err := b.svc.NewMonth(label)
@@ -354,7 +391,12 @@ func (b *Bot) doNewMonth(chatID int64, label string) {
 }
 
 func (b *Bot) doSetName(chatID int64, args string) {
-	parts := strings.SplitN(strings.TrimSpace(args), " ", 2)
+	args = strings.TrimSpace(args)
+	if args == "" {
+		b.showSetNamePicker(chatID)
+		return
+	}
+	parts := strings.SplitN(args, " ", 2)
 	if len(parts) < 2 {
 		b.reply(chatID, "Usage: /setname <room#> <name>")
 		return
@@ -372,7 +414,12 @@ func (b *Bot) doSetName(chatID int64, args string) {
 }
 
 func (b *Bot) doVacate(chatID int64, args string) {
-	roomNumber, err := strconv.Atoi(strings.TrimSpace(args))
+	args = strings.TrimSpace(args)
+	if args == "" {
+		b.showVacatePicker(chatID)
+		return
+	}
+	roomNumber, err := strconv.Atoi(args)
 	if err != nil {
 		b.reply(chatID, "Usage: /vacate <room#>")
 		return
@@ -386,7 +433,12 @@ func (b *Bot) doVacate(chatID int64, args string) {
 }
 
 func (b *Bot) doMoveIn(chatID int64, args string) {
-	roomNumber, err := strconv.Atoi(strings.TrimSpace(args))
+	args = strings.TrimSpace(args)
+	if args == "" {
+		b.showMoveInPicker(chatID)
+		return
+	}
+	roomNumber, err := strconv.Atoi(args)
 	if err != nil {
 		b.reply(chatID, "Usage: /movein <room#>")
 		return
@@ -401,6 +453,10 @@ func (b *Bot) doMoveIn(chatID int64, args string) {
 
 func (b *Bot) doPay(chatID int64, args string) {
 	parts := strings.Fields(strings.TrimSpace(args))
+	if len(parts) == 0 {
+		b.showPayPicker(chatID)
+		return
+	}
 	if len(parts) != 2 {
 		b.reply(chatID, "Usage: /pay <room#> <amount>")
 		return
@@ -446,6 +502,9 @@ func (b *Bot) send(msg tgbotapi.MessageConfig) {
 
 const helpText = `PTAS billing bot
 
+/start opens a tappable menu for everything below — commands with
+arguments also work bare (e.g. just "/pay") and will ask you step by step.
+
 /status    - show every room's payment status this period
 /unpaid    - show unpaid/partial rooms, tap to settle in full
 /pay <room#> <amount> - log a partial or full payment
@@ -455,7 +514,7 @@ const helpText = `PTAS billing bot
 /setname <room#> <name> - set a room's tenant name
 /vacate <room#> - tenant moving out: auto-prorates to today, asks for final readings, then marks vacant
 /movein <room#> - tenant moving in: auto-prorates the rest of the period, asks for starting readings
-/cancel    - cancel an in-progress reading entry
+/cancel    - cancel an in-progress action
 
 In a group, mention me for a read-only room lookup:
 @<bot username> room:4 status`
