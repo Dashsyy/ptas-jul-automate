@@ -89,15 +89,15 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		return
 	}
 
-	// Not a command: if a reading is pending for this chat, treat the text
-	// as the next meter value. Otherwise ignore.
+	// Not a command: if some conversation is pending for this chat (a meter
+	// reading, a payment amount, a tenant name, a new period label...),
+	// treat the text as the reply to it. Otherwise ignore.
 	text := strings.TrimSpace(msg.Text)
-	value, err := strconv.ParseFloat(text, 64)
-	if err != nil {
+	if text == "" {
 		return
 	}
 
-	_, out, err := b.svc.SubmitReadingValue(chatID, value)
+	_, out, err := b.svc.SubmitTextReply(chatID, text)
 	if err != nil {
 		if err == service.ErrNoPendingReading {
 			return
