@@ -63,6 +63,21 @@ func (b *Bot) RegisterCommands() error {
 	return err
 }
 
+// SetCommandsMenuButton sets the hamburger-style menu button shown next to
+// the message box (bottom-left) to open the registered command list — the
+// same discovery affordance most Telegram bots ship with. The library
+// doesn't wrap Telegram's setChatMenuButton API, so this calls it directly
+// via the concrete *tgbotapi.BotAPI (a one-time startup call, so it doesn't
+// need to go through the Sender interface used for per-update messaging).
+func SetCommandsMenuButton(api *tgbotapi.BotAPI) error {
+	params := tgbotapi.Params{}
+	if err := params.AddInterface("menu_button", map[string]string{"type": "commands"}); err != nil {
+		return err
+	}
+	_, err := api.MakeRequest("setChatMenuButton", params)
+	return err
+}
+
 // HandleUpdate is the single entry point used by both the webhook HTTP
 // handler and the long-polling loop.
 func (b *Bot) HandleUpdate(update tgbotapi.Update) {
@@ -253,14 +268,11 @@ func (b *Bot) sendRoomList(chatID int64) {
 	lastFloor := 0
 	for _, r := range rooms {
 		floorBreaker(&sb, &lastFloor, r.Floor)
-		name := r.TenantName
-		switch {
-		case r.IsVacant:
-			name = "🚪 VACANT"
-		case name == "":
-			name = "(unnamed)"
+		status := "✅ Occupied"
+		if r.IsVacant {
+			status = "🚪 Vacant"
 		}
-		fmt.Fprintf(&sb, "#%d — %s — $%.0f/mo\n", r.Number, name, r.BaseRentUSD)
+		fmt.Fprintf(&sb, "#%d — %s — $%.0f/mo\n", r.Number, status, r.BaseRentUSD)
 	}
 	b.reply(chatID, sb.String())
 }

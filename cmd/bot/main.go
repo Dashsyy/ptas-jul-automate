@@ -48,6 +48,9 @@ func main() {
 	if err := bot.RegisterCommands(); err != nil {
 		log.Printf("register commands: %v", err)
 	}
+	if err := telegram.SetCommandsMenuButton(api); err != nil {
+		log.Printf("set menu button: %v", err)
+	}
 
 	router := gin.Default()
 	router.GET("/health", func(c *gin.Context) {
