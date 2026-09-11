@@ -42,18 +42,18 @@ func New(api Sender, svc *service.Service, ownerID int64, username string) *Bot 
 // the chat shows this as an autocomplete menu — the same discovery
 // mechanism BotFather itself relies on.
 var commandList = []tgbotapi.BotCommand{
-	{Command: "start", Description: "Open the main menu"},
-	{Command: "status", Description: "Every room's payment status this period"},
-	{Command: "unpaid", Description: "Unpaid/partial rooms, tap to settle"},
-	{Command: "pay", Description: "Log a payment"},
-	{Command: "billing", Description: "Rooms missing meter readings"},
-	{Command: "rooms", Description: "List all rooms"},
-	{Command: "setname", Description: "Set a room's tenant name"},
-	{Command: "vacate", Description: "Tenant moving out"},
-	{Command: "movein", Description: "Tenant moving in"},
-	{Command: "newmonth", Description: "Open a new billing period"},
-	{Command: "cancel", Description: "Cancel an in-progress action"},
-	{Command: "help", Description: "Full command reference"},
+	{Command: "start", Description: "បើកម៉ឺនុយដើម"},
+	{Command: "status", Description: "ស្ថានភាពបង់ប្រាក់នៃបន្ទប់ទាំងអស់ក្នុងខែនេះ"},
+	{Command: "unpaid", Description: "បន្ទប់មិនទាន់បង់/បង់ខ្លះ ចុចដើម្បីទូទាត់"},
+	{Command: "pay", Description: "កត់ត្រាការបង់ប្រាក់"},
+	{Command: "billing", Description: "បន្ទប់ដែលមិនទាន់បញ្ចូលលេខម៉ែត្រ"},
+	{Command: "rooms", Description: "មើលបញ្ជីបន្ទប់ទាំងអស់"},
+	{Command: "setname", Description: "កំណត់ឈ្មោះអ្នកជួល"},
+	{Command: "vacate", Description: "អ្នកជួលផ្លាស់ចេញ"},
+	{Command: "movein", Description: "អ្នកជួលចូលនៅ"},
+	{Command: "newmonth", Description: "បើកខែគិតលុយថ្មី"},
+	{Command: "cancel", Description: "បោះបង់សកម្មភាពកំពុងធ្វើ"},
+	{Command: "help", Description: "មើលពាក្យបញ្ជាទាំងអស់"},
 }
 
 // RegisterCommands pushes commandList to Telegram. Call it once at startup;
@@ -142,7 +142,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		if err == service.ErrNoPendingReading {
 			return
 		}
-		b.reply(chatID, "Error: "+err.Error())
+		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 		return
 	}
 	b.reply(chatID, out)
@@ -185,10 +185,10 @@ func (b *Bot) handleCommand(chatID int64, cmd, args string) {
 
 	case "cancel":
 		_ = b.svc.CancelPending(chatID)
-		b.reply(chatID, "Cancelled.")
+		b.reply(chatID, "បានបោះបង់។")
 
 	default:
-		b.reply(chatID, "Unknown command. Try /help.")
+		b.reply(chatID, "មិនស្គាល់ពាក្យបញ្ជានេះទេ។ សូមសាកល្បង /help។")
 	}
 }
 
@@ -213,10 +213,10 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		}
 		bill, err := b.svc.MarkPaid(id)
 		if err != nil {
-			b.reply(chatID, "Error: "+err.Error())
+			b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 			return
 		}
-		b.reply(chatID, "✅ Settled in full.\n"+formatBillStatus(bill))
+		b.reply(chatID, "✅ បានទូទាត់ចប់សព្វគ្រប់។\n"+formatBillStatus(bill))
 
 	case strings.HasPrefix(data, "bill:"):
 		roomNumber, err := strconv.Atoi(strings.TrimPrefix(data, "bill:"))
@@ -225,7 +225,7 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		}
 		prompt, err := b.svc.StartReadingEntry(chatID, roomNumber)
 		if err != nil {
-			b.reply(chatID, "Error: "+err.Error())
+			b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 			return
 		}
 		b.reply(chatID, prompt)
@@ -239,7 +239,7 @@ func floorBreaker(sb *strings.Builder, lastFloor *int, floor int) {
 	if floor == *lastFloor {
 		return
 	}
-	fmt.Fprintf(sb, "— Floor %d —\n", floor)
+	fmt.Fprintf(sb, "— ជាន់ %d —\n", floor)
 	*lastFloor = floor
 }
 
@@ -253,7 +253,7 @@ func floorBreakerRow(lastFloor *int, floor int) [][]tgbotapi.InlineKeyboardButto
 	*lastFloor = floor
 	return [][]tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("— Floor %d —", floor), "noop"),
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("— ជាន់ %d —", floor), "noop"),
 		),
 	}
 }
@@ -261,18 +261,18 @@ func floorBreakerRow(lastFloor *int, floor int) [][]tgbotapi.InlineKeyboardButto
 func (b *Bot) sendRoomList(chatID int64) {
 	rooms, err := b.svc.ListRooms()
 	if err != nil {
-		b.reply(chatID, "Error: "+err.Error())
+		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 		return
 	}
 	var sb strings.Builder
 	lastFloor := 0
 	for _, r := range rooms {
 		floorBreaker(&sb, &lastFloor, r.Floor)
-		status := "✅ Occupied"
+		status := "✅ មានអ្នកនៅ"
 		if r.IsVacant {
-			status = "🚪 Vacant"
+			status = "🚪 ទំនេរ"
 		}
-		fmt.Fprintf(&sb, "#%d — %s — $%.0f/mo\n", r.Number, status, r.BaseRentUSD)
+		fmt.Fprintf(&sb, "បន្ទប់ %d — %s — $%.0f/ខែ\n", r.Number, status, r.BaseRentUSD)
 	}
 	b.reply(chatID, sb.String())
 }
@@ -284,7 +284,7 @@ func (b *Bot) sendUnpaidList(chatID int64) {
 		return
 	}
 	if len(bills) == 0 {
-		b.reply(chatID, "🎉 Everyone's paid up this period.")
+		b.reply(chatID, "🎉 គ្រប់គ្នាបានបង់អស់ហើយសម្រាប់ខែនេះ។")
 		return
 	}
 
@@ -295,11 +295,11 @@ func (b *Bot) sendUnpaidList(chatID int64) {
 		amount := bl.TotalUSD - bl.PaidUSD
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(
-				fmt.Sprintf("Room %d — $%.2f", bl.RoomNumber, amount),
+				fmt.Sprintf("បន្ទប់ %d — $%.2f", bl.RoomNumber, amount),
 				fmt.Sprintf("paid:%d", bl.ID)),
 		))
 	}
-	msg := tgbotapi.NewMessage(chatID, "Tap a room to settle it in full (use /pay for a partial amount):")
+	msg := tgbotapi.NewMessage(chatID, "ចុចលើបន្ទប់ណាមួយដើម្បីទូទាត់ចប់ (ប្រើ /pay សម្រាប់បង់ខ្លះ)៖")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -313,22 +313,22 @@ func formatBillStatus(bl models.Bill) string {
 	// electricity), so it would otherwise show "readings not entered"
 	// forever instead of its actual vacant/no-charge state.
 	case bl.Status == models.BillStatusNoCharge && bl.Notes == "vacant":
-		return fmt.Sprintf("🚪 Room %d — Vacant", bl.RoomNumber)
+		return fmt.Sprintf("🚪 បន្ទប់ %d — ទំនេរ", bl.RoomNumber)
 	case bl.Status == models.BillStatusNoCharge:
-		return fmt.Sprintf("➖ Room %d — No charge", bl.RoomNumber)
+		return fmt.Sprintf("➖ បន្ទប់ %d — មិនគិតលុយ", bl.RoomNumber)
 	case bl.WaterCurr == nil:
-		return fmt.Sprintf("⏳ Room %d — readings not entered", bl.RoomNumber)
+		return fmt.Sprintf("⏳ បន្ទប់ %d — មិនទាន់បញ្ចូលលេខម៉ែត្រ", bl.RoomNumber)
 	case bl.Status == models.BillStatusPaid:
 		if extra := bl.PaidUSD - bl.TotalUSD; extra > 0.01 {
-			return fmt.Sprintf("✅ Room %d — Paid ($%.2f due, $%.2f received, $%.2f extra)",
+			return fmt.Sprintf("✅ បន្ទប់ %d — បានបង់ (ត្រូវបង់ $%.2f, បានទទួល $%.2f, លើស $%.2f)",
 				bl.RoomNumber, bl.TotalUSD, bl.PaidUSD, extra)
 		}
-		return fmt.Sprintf("✅ Room %d — Paid ($%.2f)", bl.RoomNumber, bl.TotalUSD)
+		return fmt.Sprintf("✅ បន្ទប់ %d — បានបង់ ($%.2f)", bl.RoomNumber, bl.TotalUSD)
 	case bl.Status == models.BillStatusPartial:
-		return fmt.Sprintf("🟡 Room %d — Partial ($%.2f of $%.2f, owes $%.2f)",
+		return fmt.Sprintf("🟡 បន្ទប់ %d — បង់ខ្លះ ($%.2f នៃ $%.2f, នៅជំពាក់ $%.2f)",
 			bl.RoomNumber, bl.PaidUSD, bl.TotalUSD, bl.TotalUSD-bl.PaidUSD)
 	default:
-		return fmt.Sprintf("❌ Room %d — Unpaid ($%.2f)", bl.RoomNumber, bl.TotalUSD)
+		return fmt.Sprintf("❌ បន្ទប់ %d — មិនទាន់បង់ ($%.2f)", bl.RoomNumber, bl.TotalUSD)
 	}
 }
 
@@ -339,7 +339,7 @@ func (b *Bot) sendStatusOverview(chatID int64) {
 		return
 	}
 	if len(bills) == 0 {
-		b.reply(chatID, "No rooms in the current period yet.")
+		b.reply(chatID, "មិនទាន់មានបន្ទប់ណាមួយសម្រាប់ខែនេះទេ។")
 		return
 	}
 
@@ -354,7 +354,7 @@ func (b *Bot) sendStatusOverview(chatID int64) {
 		sb.WriteString(formatBillStatus(bl))
 		sb.WriteString("\n")
 	}
-	fmt.Fprintf(&sb, "\n%d/%d rooms paid.", paidCount, len(bills))
+	fmt.Fprintf(&sb, "\n%d/%d បន្ទប់បានបង់រួច។", paidCount, len(bills))
 
 	b.reply(chatID, sb.String())
 }
@@ -366,7 +366,7 @@ func (b *Bot) sendMissingReadingsList(chatID int64) {
 		return
 	}
 	if len(bills) == 0 {
-		b.reply(chatID, "✅ All rooms have readings entered this period.")
+		b.reply(chatID, "✅ គ្រប់បន្ទប់បានបញ្ចូលលេខម៉ែត្ររួចសម្រាប់ខែនេះ។")
 		return
 	}
 
@@ -374,12 +374,12 @@ func (b *Bot) sendMissingReadingsList(chatID int64) {
 	lastFloor := 0
 	for _, bl := range bills {
 		rows = append(rows, floorBreakerRow(&lastFloor, bl.RoomFloor)...)
-		label := fmt.Sprintf("Room %d", bl.RoomNumber)
+		label := fmt.Sprintf("បន្ទប់ %d", bl.RoomNumber)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("bill:%d", bl.RoomNumber)),
 		))
 	}
-	msg := tgbotapi.NewMessage(chatID, "Tap a room to enter its meter readings:")
+	msg := tgbotapi.NewMessage(chatID, "ចុចលើបន្ទប់ណាមួយដើម្បីបញ្ចូលលេខម៉ែត្រ៖")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -388,7 +388,7 @@ func (b *Bot) doNewMonth(chatID int64, label string) {
 	if label == "" {
 		msg, err := b.svc.StartNewMonthFlow(chatID)
 		if err != nil {
-			b.reply(chatID, "Error: "+err.Error())
+			b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 			return
 		}
 		b.reply(chatID, msg)
@@ -396,10 +396,10 @@ func (b *Bot) doNewMonth(chatID int64, label string) {
 	}
 	count, err := b.svc.NewMonth(label)
 	if err != nil {
-		b.reply(chatID, "Error: "+err.Error())
+		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("📅 Opened period %s with %d rooms.", label, count))
+	b.reply(chatID, fmt.Sprintf("📅 បានបើកខែ %s ជាមួយបន្ទប់ %d។", label, count))
 }
 
 func (b *Bot) doSetName(chatID int64, args string) {
@@ -410,19 +410,19 @@ func (b *Bot) doSetName(chatID int64, args string) {
 	}
 	parts := strings.SplitN(args, " ", 2)
 	if len(parts) < 2 {
-		b.reply(chatID, "Usage: /setname <room#> <name>")
+		b.reply(chatID, "របៀបប្រើ៖ /setname <លេខបន្ទប់> <ឈ្មោះ>")
 		return
 	}
 	roomNumber, err := strconv.Atoi(parts[0])
 	if err != nil {
-		b.reply(chatID, "Room number must be an integer.")
+		b.reply(chatID, "លេខបន្ទប់ត្រូវតែជាលេខគត់។")
 		return
 	}
 	if err := b.svc.SetTenantName(roomNumber, parts[1]); err != nil {
-		b.reply(chatID, "Error: "+err.Error())
+		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("Room %d name set to %q.", roomNumber, parts[1]))
+	b.reply(chatID, fmt.Sprintf("បានកំណត់ឈ្មោះបន្ទប់ %d ជា %q។", roomNumber, parts[1]))
 }
 
 func (b *Bot) doVacate(chatID int64, args string) {
@@ -433,7 +433,7 @@ func (b *Bot) doVacate(chatID int64, args string) {
 	}
 	roomNumber, err := strconv.Atoi(args)
 	if err != nil {
-		b.reply(chatID, "Usage: /vacate <room#>")
+		b.reply(chatID, "របៀបប្រើ៖ /vacate <លេខបន្ទប់>")
 		return
 	}
 	msg, err := b.svc.StartVacateEntry(chatID, roomNumber)
@@ -452,7 +452,7 @@ func (b *Bot) doMoveIn(chatID int64, args string) {
 	}
 	roomNumber, err := strconv.Atoi(args)
 	if err != nil {
-		b.reply(chatID, "Usage: /movein <room#>")
+		b.reply(chatID, "របៀបប្រើ៖ /movein <លេខបន្ទប់>")
 		return
 	}
 	msg, err := b.svc.StartMoveIn(chatID, roomNumber)
@@ -470,17 +470,17 @@ func (b *Bot) doPay(chatID int64, args string) {
 		return
 	}
 	if len(parts) != 2 {
-		b.reply(chatID, "Usage: /pay <room#> <amount>")
+		b.reply(chatID, "របៀបប្រើ៖ /pay <លេខបន្ទប់> <ចំនួនទឹកប្រាក់>")
 		return
 	}
 	roomNumber, err := strconv.Atoi(parts[0])
 	if err != nil {
-		b.reply(chatID, "Room number must be an integer.")
+		b.reply(chatID, "លេខបន្ទប់ត្រូវតែជាលេខគត់។")
 		return
 	}
 	amount, err := strconv.ParseFloat(parts[1], 64)
 	if err != nil {
-		b.reply(chatID, "Amount must be a number.")
+		b.reply(chatID, "ចំនួនទឹកប្រាក់ត្រូវតែជាលេខ។")
 		return
 	}
 
@@ -489,17 +489,17 @@ func (b *Bot) doPay(chatID int64, args string) {
 		b.reply(chatID, unwrapFriendly(err))
 		return
 	}
-	b.reply(chatID, fmt.Sprintf("💵 Logged $%.2f for Room %d.\n%s", amount, roomNumber, formatBillStatus(bill)))
+	b.reply(chatID, fmt.Sprintf("💵 បានកត់ត្រា $%.2f សម្រាប់បន្ទប់ %d។\n%s", amount, roomNumber, formatBillStatus(bill)))
 }
 
 func unwrapFriendly(err error) string {
 	if err == service.ErrNoActivePeriod {
-		return "No billing period yet — run /newmonth 2026-09 first."
+		return "មិនទាន់មានខែគិតលុយទេ — សូមប្រើ /newmonth 2026-09 សិន។"
 	}
 	if errors.Is(err, sql.ErrNoRows) {
-		return "Room not found."
+		return "រកមិនឃើញបន្ទប់នេះទេ។"
 	}
-	return "Error: " + err.Error()
+	return "មានបញ្ហា៖ " + err.Error()
 }
 
 func (b *Bot) reply(chatID int64, text string) {
@@ -512,21 +512,21 @@ func (b *Bot) send(msg tgbotapi.MessageConfig) {
 	}
 }
 
-const helpText = `PTAS billing bot
+const helpText = `រូបូតគិតលុយផ្ទះជួល PTAS
 
-/start opens a tappable menu for everything below — commands with
-arguments also work bare (e.g. just "/pay") and will ask you step by step.
+/start បើកម៉ឺនុយសម្រាប់ធ្វើអ្វីៗខាងក្រោម — ពាក្យបញ្ជាដែលត្រូវការព័ត៌មានបន្ថែម
+អាចវាយចោលៗក៏បាន (ឧ. គ្រាន់តែ "/pay") ហើយវានឹងសួរម្តងមួយៗ។
 
-/status    - show every room's payment status this period
-/unpaid    - show unpaid/partial rooms, tap to settle in full
-/pay <room#> <amount> - log a partial or full payment
-/billing   - show rooms missing readings, tap to enter them
-/newmonth YYYY-MM - open a new billing period
-/rooms     - list all rooms
-/setname <room#> <name> - set a room's tenant name
-/vacate <room#> - tenant moving out: auto-prorates to today, asks for final readings, then marks vacant
-/movein <room#> - tenant moving in: auto-prorates the rest of the period, asks for starting readings
-/cancel    - cancel an in-progress action
+/status    - មើលស្ថានភាពបង់ប្រាក់នៃបន្ទប់ទាំងអស់ក្នុងខែនេះ
+/unpaid    - មើលបន្ទប់មិនទាន់បង់/បង់ខ្លះ ចុចដើម្បីទូទាត់ចប់
+/pay <លេខបន្ទប់> <ចំនួនទឹកប្រាក់> - កត់ត្រាការបង់ប្រាក់ ពេញ ឬខ្លះ
+/billing   - មើលបន្ទប់ដែលមិនទាន់បញ្ចូលលេខម៉ែត្រ ចុចដើម្បីបញ្ចូល
+/newmonth YYYY-MM - បើកខែគិតលុយថ្មី
+/rooms     - មើលបញ្ជីបន្ទប់ទាំងអស់
+/setname <លេខបន្ទប់> <ឈ្មោះ> - កំណត់ឈ្មោះអ្នកជួល
+/vacate <លេខបន្ទប់> - អ្នកជួលផ្លាស់ចេញ៖ គណនាថ្ងៃស្នាក់នៅដល់ថ្ងៃនេះស្វ័យប្រវត្តិ សួរលេខម៉ែត្រចុងក្រោយ រួចកំណត់ជាទំនេរ
+/movein <លេខបន្ទប់> - អ្នកជួលចូលនៅ៖ គណនាចំនួនថ្ងៃនៅសល់ក្នុងខែស្វ័យប្រវត្តិ សួរលេខម៉ែត្រដើម
+/cancel    - បោះបង់សកម្មភាពកំពុងធ្វើ
 
-In a group, mention me for a read-only room lookup:
-@<bot username> room:4 status`
+ក្នុងក្រុម សូម mention ខ្ញុំដើម្បីមើលស្ថានភាពបន្ទប់ណាមួយ (មើលបានតែប៉ុណ្ណោះ):
+@<ឈ្មោះរបស់រូបូត> room:4 status`

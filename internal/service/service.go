@@ -123,7 +123,7 @@ func (s *Service) StartVacateEntry(chatID int64, roomNumber int) (string, error)
 		if err := s.rooms.SetTenantName(roomNumber, ""); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("🚪 Room %d marked vacant. No billing period is open, so there's nothing to bill.", room.Number), nil
+		return fmt.Sprintf("🚪 បន្ទប់ %d ត្រូវបានកំណត់ជាទំនេរ។ មិនទាន់មានខែគិតលុយទេ ដូច្នេះគ្មានអ្វីត្រូវគិតលុយ។", room.Number), nil
 	}
 	if err != nil {
 		return "", err
@@ -145,7 +145,7 @@ func (s *Service) StartVacateEntry(chatID int64, roomNumber int) (string, error)
 		return "", err
 	}
 
-	return fmt.Sprintf("🚪 Room %d moving out — billed for %d day(s) this period.\n💧 Enter the WATER meter reading (previous: %s m³):",
+	return fmt.Sprintf("🚪 បន្ទប់ %d កំពុងផ្លាស់ចេញ — គិតលុយ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹក (លេខចាស់៖ %s m³)៖",
 		room.Number, daysStayed, trimFloat(bill.WaterPrev)), nil
 }
 
@@ -165,7 +165,7 @@ func (s *Service) StartMoveIn(chatID int64, roomNumber int) (string, error) {
 
 	period, err := s.CurrentPeriod()
 	if err == ErrNoActivePeriod {
-		return fmt.Sprintf("🔑 Room %d unmarked vacant. No billing period open yet — run /newmonth, then /movein %d again to record the starting meter readings.",
+		return fmt.Sprintf("🔑 បន្ទប់ %d លែងជាទំនេរហើយ។ មិនទាន់មានខែគិតលុយទេ — សូមប្រើ /newmonth រួចប្រើ /movein %d ម្តងទៀតដើម្បីកត់ត្រាលេខម៉ែត្រដើម។",
 			room.Number, room.Number), nil
 	}
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *Service) StartMoveIn(chatID int64, roomNumber int) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("🔑 Room %d moving in — billed for %d day(s) this period.\n💧 Enter the current WATER meter reading (new baseline):",
+	return fmt.Sprintf("🔑 បន្ទប់ %d កំពុងចូលនៅ — គិតលុយ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹកបច្ចុប្បន្ន (ជាលេខដើម)៖",
 		room.Number, daysStayed), nil
 }
 
@@ -197,7 +197,7 @@ func (s *Service) StartMoveIn(chatID int64, roomNumber int) (string, error) {
 // reading forward as this period's "previous" reading.
 func (s *Service) NewMonth(label string) (int, error) {
 	if _, err := s.periods.GetByLabel(label); err == nil {
-		return 0, fmt.Errorf("period %s already exists", label)
+		return 0, fmt.Errorf("ខែ %s មានរួចហើយ", label)
 	} else if err != sql.ErrNoRows {
 		return 0, err
 	}
@@ -291,7 +291,7 @@ func (s *Service) RoomsMissingReadings() ([]models.Bill, error) {
 // against it. Returns the updated bill.
 func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (models.Bill, error) {
 	if amountUSD <= 0 {
-		return models.Bill{}, fmt.Errorf("payment amount must be positive")
+		return models.Bill{}, fmt.Errorf("ចំនួនទឹកប្រាក់ត្រូវតែធំជាងសូន្យ")
 	}
 
 	bill, err := s.bills.GetByID(billID)
@@ -299,7 +299,7 @@ func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (m
 		return models.Bill{}, err
 	}
 	if bill.Status == models.BillStatusNoCharge {
-		return models.Bill{}, fmt.Errorf("room %d is marked no-charge — no payment expected", bill.RoomNumber)
+		return models.Bill{}, fmt.Errorf("បន្ទប់ %d ត្រូវបានកំណត់ជាមិនគិតលុយ — មិនចាំបាច់បង់ទេ", bill.RoomNumber)
 	}
 
 	if err := s.payments.Add(billID, amountUSD, note); err != nil {
@@ -341,7 +341,7 @@ func (s *Service) MarkPaid(billID int64) (models.Bill, error) {
 	if remaining <= paymentEpsilon {
 		return bill, nil
 	}
-	return s.RecordPayment(billID, remaining, "settled in full via /unpaid")
+	return s.RecordPayment(billID, remaining, "ទូទាត់ចប់សព្វគ្រប់តាម /unpaid")
 }
 
 // RoomStatus fetches a room's bill for the current period by room number —
@@ -381,7 +381,7 @@ func (s *Service) StartPayFlow(chatID int64, roomNumber int) (string, error) {
 	}); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("💵 Room %d — how much did they pay (owes $%.2f)?", roomNumber, bill.TotalUSD-bill.PaidUSD), nil
+	return fmt.Sprintf("💵 បន្ទប់ %d — តើគាត់បានបង់ប៉ុន្មាន? (នៅជំពាក់ $%.2f)", roomNumber, bill.TotalUSD-bill.PaidUSD), nil
 }
 
 func (s *Service) submitPayAmount(pa models.PendingAction, amount float64) (bool, string, error) {
@@ -392,7 +392,7 @@ func (s *Service) submitPayAmount(pa models.PendingAction, amount float64) (bool
 	if err != nil {
 		return false, "", err
 	}
-	return true, fmt.Sprintf("💵 Logged $%.2f for Room %d.", amount, bill.RoomNumber), nil
+	return true, fmt.Sprintf("💵 បានកត់ត្រា $%.2f សម្រាប់បន្ទប់ %d។", amount, bill.RoomNumber), nil
 }
 
 // StartSetNameFlow begins the "what name?" conversation for a room already
@@ -409,12 +409,12 @@ func (s *Service) StartSetNameFlow(chatID int64, roomNumber int) (string, error)
 	}); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("✏️ Room %d — what's the tenant's name?", roomNumber), nil
+	return fmt.Sprintf("✏️ បន្ទប់ %d — តើអ្នកជួលឈ្មោះអ្វី?", roomNumber), nil
 }
 
 func (s *Service) submitSetName(pa models.PendingAction, name string) (bool, string, error) {
 	if name == "" {
-		return false, "Name can't be empty — try again.", nil
+		return false, "ត្រូវការឈ្មោះ — សូមព្យាយាមម្តងទៀត។", nil
 	}
 	room, err := s.rooms.GetByID(*pa.RoomID)
 	if err != nil {
@@ -426,7 +426,7 @@ func (s *Service) submitSetName(pa models.PendingAction, name string) (bool, str
 	if err := s.rooms.SetTenantName(room.Number, name); err != nil {
 		return false, "", err
 	}
-	return true, fmt.Sprintf("Room %d name set to %q.", room.Number, name), nil
+	return true, fmt.Sprintf("បានកំណត់ឈ្មោះបន្ទប់ %d ជា %q។", room.Number, name), nil
 }
 
 // StartNewMonthFlow begins the "what label?" conversation for opening a new
@@ -437,12 +437,12 @@ func (s *Service) StartNewMonthFlow(chatID int64) (string, error) {
 	}); err != nil {
 		return "", err
 	}
-	return "📅 What label for the new period? e.g. 2026-10", nil
+	return "📅 តើខែថ្មីនេះមានឈ្មោះអ្វី? ឧទាហរណ៍ 2026-10", nil
 }
 
 func (s *Service) submitNewMonthLabel(pa models.PendingAction, label string) (bool, string, error) {
 	if label == "" {
-		return false, "Label can't be empty — try again, e.g. 2026-10.", nil
+		return false, "ត្រូវការឈ្មោះខែ — សូមព្យាយាមម្តងទៀត ឧទាហរណ៍ 2026-10។", nil
 	}
 	if err := s.pending.Clear(pa.ChatID); err != nil {
 		return false, "", err
@@ -451,7 +451,7 @@ func (s *Service) submitNewMonthLabel(pa models.PendingAction, label string) (bo
 	if err != nil {
 		return false, "", err
 	}
-	return true, fmt.Sprintf("📅 Opened period %s with %d rooms.", label, count), nil
+	return true, fmt.Sprintf("📅 បានបើកខែ %s ជាមួយបន្ទប់ %d។", label, count), nil
 }
 
 func (s *Service) GetBill(billID int64) (models.Bill, error) {
@@ -485,7 +485,7 @@ func (s *Service) StartReadingEntry(chatID int64, roomNumber int) (string, error
 		return "", err
 	}
 
-	return fmt.Sprintf("💧 Room %d — enter the WATER meter reading (previous: %s m³):",
+	return fmt.Sprintf("💧 បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រទឹក (លេខចាស់៖ %s m³)៖",
 		room.Number, trimFloat(bill.WaterPrev)), nil
 }
 
@@ -512,19 +512,19 @@ func (s *Service) SubmitTextReply(chatID int64, text string) (done bool, message
 	case "enter_readings", "vacate_readings":
 		value, perr := strconv.ParseFloat(strings.TrimSpace(text), 64)
 		if perr != nil {
-			return false, "Please enter a number.", nil
+			return false, "សូមបញ្ចូលជាលេខ។", nil
 		}
 		return s.submitBillReading(pa, value)
 	case "movein_baseline":
 		value, perr := strconv.ParseFloat(strings.TrimSpace(text), 64)
 		if perr != nil {
-			return false, "Please enter a number.", nil
+			return false, "សូមបញ្ចូលជាលេខ។", nil
 		}
 		return s.submitMoveInReading(pa, value)
 	case "pay_amount":
 		value, perr := strconv.ParseFloat(strings.TrimSpace(text), 64)
 		if perr != nil {
-			return false, "Please enter a number.", nil
+			return false, "សូមបញ្ចូលជាលេខ។", nil
 		}
 		return s.submitPayAmount(pa, value)
 	case "setname_text":
@@ -532,7 +532,7 @@ func (s *Service) SubmitTextReply(chatID int64, text string) (done bool, message
 	case "newmonth_label":
 		return s.submitNewMonthLabel(pa, strings.TrimSpace(text))
 	default:
-		return false, "", fmt.Errorf("unknown pending kind %q", pa.Kind)
+		return false, "", fmt.Errorf("ប្រភេទសកម្មភាពមិនស្គាល់ %q", pa.Kind)
 	}
 }
 
@@ -557,7 +557,7 @@ func (s *Service) submitBillReading(pa models.PendingAction, value float64) (boo
 		if err := s.pending.Set(pa); err != nil {
 			return false, "", err
 		}
-		return false, fmt.Sprintf("⚡ Room %d — enter the ELECTRICITY meter reading (previous: %s kWh):",
+		return false, fmt.Sprintf("⚡ បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រភ្លើង (លេខចាស់៖ %s kWh)៖",
 			bill.RoomNumber, trimFloat(bill.ElecPrev)), nil
 
 	case "await_elec":
@@ -627,13 +627,13 @@ func (s *Service) submitBillReading(pa models.PendingAction, value float64) (boo
 				_ = s.rooms.SetVacant(room.Number, true)
 				_ = s.rooms.SetTenantName(room.Number, "")
 			}
-			invoice += "\n\n🚪 Room now marked vacant."
+			invoice += "\n\n🚪 បន្ទប់នេះត្រូវបានកំណត់ជាទំនេរឥឡូវនេះ។"
 		}
 
-		return true, "✅ Bill saved.\n\n" + invoice, nil
+		return true, "✅ បានរក្សាទុកវិក្កយបត្រ។\n\n" + invoice, nil
 
 	default:
-		return false, "", fmt.Errorf("unknown pending step %q", pa.Step)
+		return false, "", fmt.Errorf("ជំហានមិនស្គាល់ %q", pa.Step)
 	}
 }
 
@@ -658,7 +658,7 @@ func (s *Service) submitMoveInReading(pa models.PendingAction, value float64) (b
 		if err := s.pending.Set(pa); err != nil {
 			return false, "", err
 		}
-		return false, fmt.Sprintf("⚡ Room %d — enter the current ELECTRICITY meter reading (new baseline):", bill.RoomNumber), nil
+		return false, fmt.Sprintf("⚡ បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រភ្លើងបច្ចុប្បន្ន (ជាលេខដើម)៖", bill.RoomNumber), nil
 
 	case "await_elec":
 		var stored readingPayload
@@ -671,11 +671,11 @@ func (s *Service) submitMoveInReading(pa models.PendingAction, value float64) (b
 		if err := s.pending.Clear(pa.ChatID); err != nil {
 			return false, "", err
 		}
-		return true, fmt.Sprintf("✅ Room %d ready — starting readings recorded (water %s m³, electricity %s kWh). It'll bill normally at the next /billing pass.",
+		return true, fmt.Sprintf("✅ បន្ទប់ %d រួចរាល់ — បានកត់ត្រាលេខម៉ែត្រដើម (ទឹក %s m³, ភ្លើង %s kWh)។ វានឹងគិតលុយធម្មតានៅពេលប្រើ /billing លើកក្រោយ។",
 			bill.RoomNumber, trimFloat(stored.Water), trimFloat(value)), nil
 
 	default:
-		return false, "", fmt.Errorf("unknown pending step %q", pa.Step)
+		return false, "", fmt.Errorf("ជំហានមិនស្គាល់ %q", pa.Step)
 	}
 }
 
