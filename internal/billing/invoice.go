@@ -4,20 +4,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	"ptas-bot/internal/i18n"
 )
-
-var khmerMonths = [...]string{
-	"មករា", "កុម្ភៈ", "មីនា", "មេសា", "ឧសភា", "មិថុនា",
-	"កក្កដា", "សីហា", "កញ្ញា", "តុលា", "វិច្ឆិកា", "ធ្នូ",
-}
-
-// KhmerMonthYear renders month (1-12) and year in Khmer, e.g. "សីហា ២០២៦".
-func KhmerMonthYear(month int, year int) string {
-	if month < 1 || month > 12 {
-		return fmt.Sprintf("%d/%d", month, year)
-	}
-	return fmt.Sprintf("%s %d", khmerMonths[month-1], year)
-}
 
 type InvoiceInput struct {
 	PeriodLabel string // human label, e.g. "សីហា 2026"
@@ -43,20 +32,19 @@ type InvoiceInput struct {
 func RenderKhmerInvoice(in InvoiceInput) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "វិក្កយបត្របន្ទប់ជួល\n")
-	fmt.Fprintf(&b, "ប្រចាំខែ %s\n\n", in.PeriodLabel)
-	fmt.Fprintf(&b, "បន្ទប់លេខ %d\n\n", in.RoomNumber)
+	fmt.Fprintf(&b, "%s\n", i18n.InvoiceTitle)
+	fmt.Fprintf(&b, "%s\n\n", i18n.InvoiceMonthLine(in.PeriodLabel))
+	fmt.Fprintf(&b, "%s\n\n", i18n.InvoiceRoomLine(in.RoomNumber))
 
-	fmt.Fprintf(&b, "លេខថ្មី  | លេខចាស់ | ចំនួន | សរុប\n")
-	fmt.Fprintf(&b, "ទឹក      %-8s %-8s %-6s %s ៛\n",
-		fmtNum(in.WaterCurr), fmtNum(in.WaterPrev), fmtNum(in.WaterUsed), fmtRiel(in.WaterCost))
-	fmt.Fprintf(&b, "ភ្លើង     %-8s %-8s %-6s %s ៛\n\n",
-		fmtNum(in.ElecCurr), fmtNum(in.ElecPrev), fmtNum(in.ElecUsed), fmtRiel(in.ElecCost))
+	fmt.Fprintf(&b, "%s\n", i18n.InvoiceTableHeader)
+	fmt.Fprintf(&b, "%s      %-8s %-8s %-6s %s ៛\n",
+		i18n.InvoiceRowWater, fmtNum(in.WaterCurr), fmtNum(in.WaterPrev), fmtNum(in.WaterUsed), fmtRiel(in.WaterCost))
+	fmt.Fprintf(&b, "%s     %-8s %-8s %-6s %s ៛\n\n",
+		i18n.InvoiceRowElec, fmtNum(in.ElecCurr), fmtNum(in.ElecPrev), fmtNum(in.ElecUsed), fmtRiel(in.ElecCost))
 
-	fmt.Fprintf(&b, "ថ្លៃបន្ទប់: $%s × %d/%d ថ្ងៃ = %s ៛ ($%s)\n\n",
-		fmtNum(in.RentUSD), in.DaysStayed, in.DaysInMonth, fmtRiel(in.RentRiel), fmtNum(in.RentUSD))
+	fmt.Fprintf(&b, "%s\n\n", i18n.InvoiceRoomRentLine(fmtNum(in.RentUSD), in.DaysStayed, in.DaysInMonth, fmtRiel(in.RentRiel)))
 
-	fmt.Fprintf(&b, "សរុបទឹកប្រាក់: %s ៛  /  $%s", fmtRiel(in.TotalRiel), fmtNum(in.TotalUSD))
+	fmt.Fprintf(&b, "%s", i18n.InvoiceTotalLine(fmtRiel(in.TotalRiel), fmtNum(in.TotalUSD)))
 
 	return b.String()
 }

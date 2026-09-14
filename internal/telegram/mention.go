@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"ptas-bot/internal/i18n"
 )
 
 var roomQueryRe = regexp.MustCompile(`(?i)room\s*[:#]?\s*(\d+)`)
@@ -32,7 +34,7 @@ func (b *Bot) mentionQuery(msg *tgbotapi.Message) (string, bool) {
 func (b *Bot) handleMention(chatID int64, query string) {
 	m := roomQueryRe.FindStringSubmatch(query)
 	if m == nil {
-		b.reply(chatID, "សាកល្បងប្រើ៖ @"+b.username+" room:4 status")
+		b.reply(chatID, i18n.MentionUsageHint(b.username))
 		return
 	}
 
