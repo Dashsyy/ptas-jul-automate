@@ -40,6 +40,8 @@ func (b *Bot) handleMenuCallback(chatID int64, data string) bool {
 		b.showVacatePicker(chatID)
 	case data == "menu:movein":
 		b.showMoveInPicker(chatID)
+	case data == "menu:total":
+		b.sendMonthlyTotal(chatID)
 	case data == "menu:newmonth":
 		msg, err := b.svc.StartNewMonthFlow(chatID)
 		if err != nil {
@@ -134,6 +136,7 @@ func (b *Bot) showMainMenu(chatID int64) {
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData(i18n.BtnNewMonth, "menu:newmonth"),
+			tgbotapi.NewInlineKeyboardButtonData(i18n.BtnTotal, "menu:total"),
 		),
 	}
 	msg := tgbotapi.NewMessage(chatID, i18n.MainMenuHeader)

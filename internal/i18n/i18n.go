@@ -25,6 +25,7 @@ const (
 	CmdVacate   = "កត់ត្រាអ្នករើចេញ"
 	CmdMoveIn   = "កត់ត្រាអ្នករើចូល"
 	CmdNewMonth = "បង្កើតវិក្កយបត្រខែថ្មី"
+	CmdTotal    = "សរុបលុយប្រចាំខែ"
 	CmdCancel   = "បោះបង់"
 	CmdHelp     = "របៀបប្រើប្រាស់រូបូត"
 )
@@ -41,6 +42,7 @@ const (
 	BtnVacate      = "🚪 រើចេញ"
 	BtnMoveIn      = "🔑 រើចូល"
 	BtnNewMonth    = "📅 ខែថ្មី"
+	BtnTotal       = "🧮 សរុបលុយ"
 	BtnBackMain    = "⬅️ ត្រឡប់ទៅម៉ឺនុយដើម"
 	BtnBackRooms   = "⬅️ ត្រឡប់ទៅបន្ទប់ទាំងអស់"
 )
@@ -106,6 +108,13 @@ func PaidCount(paid, total int) string {
 
 func MonthOpened(label string, roomCount int) string {
 	return fmt.Sprintf("📅 បានបង្កើតវិក្កយបត្រខែ %s ជាមួយចំនួន %d បន្ទប់។", label, roomCount)
+}
+
+// MonthlyTotal summarizes the current month's billing across every room:
+// what's owed in total, what's been collected, and what's still outstanding.
+func MonthlyTotal(billed, collected float64) string {
+	return fmt.Sprintf("🧮 សរុបលុយប្រចាំខែ\n\nត្រូវទូទាត់សរុប៖ $%.2f\nបានទទួលសរុប៖ $%.2f\nនៅខ្វះសរុប៖ $%.2f",
+		billed, collected, billed-collected)
 }
 
 // ---- Bill status line — shared by /status, the @mention query, and /pay's
@@ -186,6 +195,32 @@ func MentionUsageHint(username string) string {
 	return "សាកល្បងប្រើ៖ @" + username + " room:4 status"
 }
 
+// UpdateInfoUsageHint is shown when a "update_info" mention doesn't include
+// a recognizable room number.
+func UpdateInfoUsageHint(username string) string {
+	return "សូមប្រើទម្រង់៖ @" + username + " update_info room 4 — ព្រមទាំង reply ទៅសារជូនដំណឹង ABA PayWay ដើម។"
+}
+
+// UpdateInfoNeedsReply is shown when "update_info" is used without replying
+// to the ABA PayWay notification message it should read the amount from.
+const UpdateInfoNeedsReply = "សូម reply (ឆ្លើយតប) ទៅសារជូនដំណឹង ABA PayWay មុននឹងវាយបញ្ជានេះ។"
+
+// UpdateInfoParseFailed is shown when the replied-to message doesn't parse
+// as an ABA PayWay notification.
+const UpdateInfoParseFailed = "មិនអាចអានព័ត៌មានបង់ប្រាក់ពីសារនោះទេ — សូមប្រាកដថាសារនោះជាសារជូនដំណឹង ABA PayWay ដើម។"
+
+// DuplicateTransaction is shown when the same ABA PayWay transaction (by
+// ID) has already been recorded — e.g. "update_info" was replied to the
+// same forwarded notification a second time.
+const DuplicateTransaction = "⚠️ ប្រតិបត្តិការនេះត្រូវបានកត់ត្រារួចហើយ — សូមពិនិត្យ /status មុននឹងព្យាយាមម្តងទៀត។"
+
+// UpdateInfoRecorded confirms a payment imported from an ABA PayWay
+// notification, naming the payer so the owner can visually double-check the
+// parse before trusting the recorded amount.
+func UpdateInfoRecorded(payer string, amount float64, roomNumber int) string {
+	return fmt.Sprintf("💵 បានកត់ត្រា $%.2f ពី %s សម្រាប់បន្ទប់ %d។", amount, payer, roomNumber)
+}
+
 // ---- Vacate / move-in / pay / setname / newmonth conversation prompts ----
 
 func VacateNoActiveMonth(roomNumber int) string {
@@ -215,6 +250,14 @@ const AmountMustBePositive = "ចំនួនទឹកប្រាក់ត្�
 
 func RoomNoChargeNoPayment(roomNumber int) string {
 	return fmt.Sprintf("បន្ទប់ %d ត្រូវបានកំណត់ថាមិនគិតលុយ — មិនចាំបាច់បង់ប្រាក់ទេ។", roomNumber)
+}
+
+// RoomAlreadyPaid guards against recording a second payment on a bill
+// that's already settled in full — shown instead of the "how much did they
+// pay?" prompt, and returned as an error if a payment is attempted anyway
+// (e.g. via a direct /pay <room> <amount> command).
+func RoomAlreadyPaid(roomNumber int, total float64) string {
+	return fmt.Sprintf("✅ បន្ទប់ %d បានបង់ពេញ ($%.2f) រួចហើយ — មិនចាំបាច់បង់បន្ថែមទេ។", roomNumber, total)
 }
 
 const SettledViaUnpaidNote = "បានទូទាត់រួចរាល់តាមរយៈបញ្ជា /unpaid"
@@ -316,6 +359,7 @@ const HelpText = `🤖 ជំនួយការ PTAS Bot សម្រាប់�
 /pay <បន្ទប់> <លុយ> - កត់ត្រាការបង់ប្រាក់ (បង់ពេញ ឬបង់ខ្លះ)
 /billing   - មើល និងបញ្ចូលលេខម៉ែត្រសម្រាប់បន្ទប់ដែលមិនទាន់មាន
 /newmonth YYYY-MM - បង្កើតវិក្កយបត្រខែថ្មី
+/total     - មើលចំនួនលុយសរុបត្រូវទូទាត់ បានទទួល និងនៅខ្វះ សម្រាប់ខែនេះ
 /rooms     - មើលបញ្ជីបន្ទប់ទាំងអស់របស់អ្នក
 /setname <បន្ទប់> <ឈ្មោះ> - ដាក់ឈ្មោះអ្នកជួល
 /vacate <បន្ទប់> - កត់ត្រាអ្នករើចេញ៖ គណនាថ្ងៃស្នាក់នៅ និងសួរលេខម៉ែត្រចុងក្រោយ
@@ -323,4 +367,7 @@ const HelpText = `🤖 ជំនួយការ PTAS Bot សម្រាប់�
 /cancel    - បោះបង់ប្រតិបត្តិការបច្ចុប្បន្ន
 
 💡 នៅក្នុងគ្រុប អ្នកអាច mention ឈ្មោះខ្ញុំ ដើម្បីឆែកស្ថានភាពបន្ទប់បានយ៉ាងរហ័ស។
-ឧទាហរណ៍៖ @<bot> room:4 status`
+ឧទាហរណ៍៖ @<bot> room:4 status
+
+💡 ទទួលបានសារជូនដំណឹង ABA PayWay? Forward សារនោះមកបញ្ចូល រួច reply វាដោយវាយ
+@<bot> update_info room 4 — ខ្ញុំនឹងអានចំនួនទឹកប្រាក់ និងកត់ត្រាការបង់ប្រាក់ជូនភ្លាម។`

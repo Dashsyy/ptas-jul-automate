@@ -70,13 +70,14 @@ func main() {
 
 	router.POST("/sim/message", func(c *gin.Context) {
 		var req struct {
-			Text string `json:"text"`
+			Text    string `json:"text"`
+			ReplyTo string `json:"reply_to"`
 		}
 		if err := c.BindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		bot.HandleUpdate(buildMessageUpdate(simChatID, simOwnerID, req.Text))
+		bot.HandleUpdate(buildMessageUpdate(simChatID, simOwnerID, req.Text, req.ReplyTo))
 		c.JSON(http.StatusOK, gin.H{"messages": sender.Drain()})
 	})
 

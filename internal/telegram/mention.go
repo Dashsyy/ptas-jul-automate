@@ -7,6 +7,7 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
+	"ptas-bot/internal/abapay"
 	"ptas-bot/internal/i18n"
 	"ptas-bot/internal/kmnum"
 )
@@ -16,6 +17,9 @@ import (
 // Arabic ones, so a query like "room:៥ status" must parse the same as
 // "room:5 status".
 var roomQueryRe = regexp.MustCompile(`(?i)room\s*[:#]?\s*([0-9\x{17E0}-\x{17E9}]+)`)
+
+// updateInfoRe recognizes the "update_info" mention sub-command.
+var updateInfoRe = regexp.MustCompile(`(?i)^update_info\b`)
 
 // mentionQuery reports whether the bot is @mentioned in msg and, if so,
 // returns the text following the mention. Telegram delivers @mentions to a
@@ -33,10 +37,17 @@ func (b *Bot) mentionQuery(msg *tgbotapi.Message) (string, bool) {
 	return strings.TrimSpace(msg.Text[idx+len(mention):]), true
 }
 
-// handleMention answers a "room:<n> status"-style query sent by @mentioning
-// the bot in a group (e.g. the ABA PayWay notifications group). It's the
-// only thing the bot acts on outside a private DM, and only from the owner.
-func (b *Bot) handleMention(chatID int64, query string) {
+// handleMention answers whatever the bot was @mentioned to do: a
+// "room:<n> status"-style read-only query, or an "update_info room <n>"
+// payment import. It's the only thing the bot acts on outside a private
+// DM, and only from the owner.
+func (b *Bot) handleMention(msg *tgbotapi.Message, query string) {
+	if updateInfoRe.MatchString(query) {
+		b.handleUpdateInfo(msg, query)
+		return
+	}
+
+	chatID := msg.Chat.ID
 	m := roomQueryRe.FindStringSubmatch(query)
 	if m == nil {
 		b.reply(chatID, i18n.MentionUsageHint(b.username))
@@ -53,4 +64,43 @@ func (b *Bot) handleMention(chatID int64, query string) {
 		return
 	}
 	b.reply(chatID, formatBillStatus(bill))
+}
+
+// handleUpdateInfo records a payment by parsing the ABA PayWay notification
+// the mention is a reply to. The intended flow: forward the ABA PayWay
+// notification into the chat, then reply to it with
+// "@<bot> update_info room 4" — the bot reads the forwarded message's
+// amount and payer, and records the payment against room 4 with the
+// payer's name and transaction ID kept as the payment's note.
+func (b *Bot) handleUpdateInfo(msg *tgbotapi.Message, query string) {
+	chatID := msg.Chat.ID
+
+	m := roomQueryRe.FindStringSubmatch(query)
+	if m == nil {
+		b.reply(chatID, i18n.UpdateInfoUsageHint(b.username))
+		return
+	}
+	roomNumber, err := strconv.Atoi(kmnum.ToArabic(m[1]))
+	if err != nil {
+		b.reply(chatID, i18n.UpdateInfoUsageHint(b.username))
+		return
+	}
+
+	if msg.ReplyToMessage == nil || msg.ReplyToMessage.Text == "" {
+		b.reply(chatID, i18n.UpdateInfoNeedsReply)
+		return
+	}
+
+	notif, err := abapay.Parse(msg.ReplyToMessage.Text)
+	if err != nil {
+		b.reply(chatID, i18n.UpdateInfoParseFailed)
+		return
+	}
+
+	bill, err := b.svc.PayRoomFromNotification(roomNumber, notif.AmountUSD, notif.Note(), notif.TrxID)
+	if err != nil {
+		b.reply(chatID, unwrapFriendly(err))
+		return
+	}
+	b.reply(chatID, i18n.UpdateInfoRecorded(notif.Payer, notif.AmountUSD, roomNumber)+"\n"+formatBillStatus(bill))
 }

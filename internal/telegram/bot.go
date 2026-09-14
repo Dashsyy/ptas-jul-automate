@@ -54,6 +54,7 @@ var commandList = []tgbotapi.BotCommand{
 	{Command: "vacate", Description: i18n.CmdVacate},
 	{Command: "movein", Description: i18n.CmdMoveIn},
 	{Command: "newmonth", Description: i18n.CmdNewMonth},
+	{Command: "total", Description: i18n.CmdTotal},
 	{Command: "cancel", Description: i18n.CmdCancel},
 	{Command: "help", Description: i18n.CmdHelp},
 }
@@ -121,7 +122,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 		// (e.g. "@mybot room:4 status") — everything else, including the
 		// PayWay bot's own notifications, is ignored here.
 		if query, ok := b.mentionQuery(msg); ok {
-			b.handleMention(chatID, query)
+			b.handleMention(msg, query)
 		}
 		return
 	}
@@ -172,6 +173,9 @@ func (b *Bot) handleCommand(chatID int64, cmd, args string) {
 
 	case "newmonth":
 		b.doNewMonth(chatID, strings.TrimSpace(args))
+
+	case "total":
+		b.sendMonthlyTotal(chatID)
 
 	case "pay":
 		b.doPay(chatID, args)
@@ -359,6 +363,18 @@ func (b *Bot) sendStatusOverview(chatID int64) {
 	b.reply(chatID, sb.String())
 }
 
+// sendMonthlyTotal shows the current month's billed/collected/outstanding
+// totals across every room — the dollar-figure counterpart to /status's
+// per-room breakdown.
+func (b *Bot) sendMonthlyTotal(chatID int64) {
+	billed, collected, err := b.svc.MonthlyTotals()
+	if err != nil {
+		b.reply(chatID, unwrapFriendly(err))
+		return
+	}
+	b.reply(chatID, i18n.MonthlyTotal(billed, collected))
+}
+
 func (b *Bot) sendMissingReadingsList(chatID int64) {
 	bills, err := b.svc.RoomsMissingReadings()
 	if err != nil {
@@ -499,6 +515,9 @@ func unwrapFriendly(err error) string {
 	}
 	if errors.Is(err, sql.ErrNoRows) {
 		return i18n.RoomNotFound
+	}
+	if err == service.ErrDuplicateTransaction {
+		return i18n.DuplicateTransaction
 	}
 	return i18n.ErrorPlain(err)
 }

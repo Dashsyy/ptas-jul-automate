@@ -22,7 +22,7 @@ func nextID() int {
 // chat box exercises the group @mention code path — the only thing that
 // differs from real Telegram is how the chat type gets set, not how Bot
 // handles the update.
-func buildMessageUpdate(chatID, userID int64, text string) tgbotapi.Update {
+func buildMessageUpdate(chatID, userID int64, text, replyToText string) tgbotapi.Update {
 	chatType := "private"
 	if strings.HasPrefix(text, "@") {
 		chatType = "group"
@@ -33,6 +33,14 @@ func buildMessageUpdate(chatID, userID int64, text string) tgbotapi.Update {
 		From:      &tgbotapi.User{ID: userID, FirstName: "You"},
 		Chat:      &tgbotapi.Chat{ID: chatID, Type: chatType},
 		Text:      text,
+	}
+
+	if replyToText != "" {
+		msg.ReplyToMessage = &tgbotapi.Message{
+			MessageID: nextID(),
+			Chat:      &tgbotapi.Chat{ID: chatID, Type: chatType},
+			Text:      replyToText,
+		}
 	}
 
 	if strings.HasPrefix(text, "/") {

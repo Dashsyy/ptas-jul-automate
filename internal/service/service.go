@@ -285,12 +285,53 @@ func (s *Service) RoomsMissingReadings() ([]models.Bill, error) {
 	return missing, nil
 }
 
+// MonthlyTotals sums the current period's bills into a billed/collected
+// snapshot across every room — no_charge (vacant) bills contribute nothing
+// since there's nothing billed against them.
+func (s *Service) MonthlyTotals() (billed, collected float64, err error) {
+	period, err := s.CurrentPeriod()
+	if err != nil {
+		return 0, 0, err
+	}
+	bills, err := s.bills.ListForPeriod(period.ID)
+	if err != nil {
+		return 0, 0, err
+	}
+	for _, bl := range bills {
+		if bl.Status == models.BillStatusNoCharge {
+			continue
+		}
+		billed += bl.TotalUSD
+		collected += bl.PaidUSD
+	}
+	return billed, collected, nil
+}
+
+// ErrDuplicateTransaction means a payment with this external reference
+// (e.g. an ABA PayWay transaction ID) has already been recorded — guards
+// against replying "update_info" twice to the same forwarded notification.
+var ErrDuplicateTransaction = errors.New("this transaction has already been recorded")
+
 // RecordPayment logs a payment toward a bill and recomputes its status
 // (unpaid -> partial -> paid) from the running total of payments logged
 // against it. Returns the updated bill.
 func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (models.Bill, error) {
+	return s.recordPayment(billID, amountUSD, note, "")
+}
+
+func (s *Service) recordPayment(billID int64, amountUSD float64, note, externalRef string) (models.Bill, error) {
 	if amountUSD <= 0 {
 		return models.Bill{}, errors.New(i18n.AmountMustBePositive)
+	}
+
+	if externalRef != "" {
+		exists, err := s.payments.ExistsByExternalRef(externalRef)
+		if err != nil {
+			return models.Bill{}, err
+		}
+		if exists {
+			return models.Bill{}, ErrDuplicateTransaction
+		}
 	}
 
 	bill, err := s.bills.GetByID(billID)
@@ -300,8 +341,11 @@ func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (m
 	if bill.Status == models.BillStatusNoCharge {
 		return models.Bill{}, errors.New(i18n.RoomNoChargeNoPayment(bill.RoomNumber))
 	}
+	if bill.Status == models.BillStatusPaid {
+		return models.Bill{}, errors.New(i18n.RoomAlreadyPaid(bill.RoomNumber, bill.TotalUSD))
+	}
 
-	if err := s.payments.Add(billID, amountUSD, note); err != nil {
+	if err := s.payments.Add(billID, amountUSD, note, externalRef); err != nil {
 		return models.Bill{}, err
 	}
 
@@ -367,6 +411,18 @@ func (s *Service) PayRoom(roomNumber int, amountUSD float64) (models.Bill, error
 	return s.RecordPayment(bill.ID, amountUSD, "")
 }
 
+// PayRoomFromNotification records a payment parsed from an ABA PayWay
+// notification ("update_info"), keyed by its transaction ID so replying to
+// the same forwarded message a second time is rejected (ErrDuplicateTransaction)
+// instead of recording the money twice.
+func (s *Service) PayRoomFromNotification(roomNumber int, amountUSD float64, note, trxID string) (models.Bill, error) {
+	bill, err := s.RoomStatus(roomNumber)
+	if err != nil {
+		return models.Bill{}, err
+	}
+	return s.recordPayment(bill.ID, amountUSD, note, trxID)
+}
+
 // StartPayFlow begins the "how much did Room N pay?" conversation for a
 // room already chosen (by tapping a room button) — the interactive
 // counterpart to /pay <room#> <amount>.
@@ -374,6 +430,9 @@ func (s *Service) StartPayFlow(chatID int64, roomNumber int) (string, error) {
 	bill, err := s.RoomStatus(roomNumber)
 	if err != nil {
 		return "", err
+	}
+	if bill.Status == models.BillStatusPaid {
+		return i18n.RoomAlreadyPaid(roomNumber, bill.TotalUSD), nil
 	}
 	if err := s.pending.Set(models.PendingAction{
 		ChatID: chatID, Kind: "pay_amount", BillID: &bill.ID, Step: "await_amount", Payload: "{}",
