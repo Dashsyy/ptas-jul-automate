@@ -32,7 +32,7 @@ func (b *Bot) mentionQuery(msg *tgbotapi.Message) (string, bool) {
 func (b *Bot) handleMention(chatID int64, query string) {
 	m := roomQueryRe.FindStringSubmatch(query)
 	if m == nil {
-		b.reply(chatID, "សាកល្បង៖ @"+b.username+" room:4 status")
+		b.reply(chatID, "សាកល្បងប្រើ៖ @"+b.username+" room:4 status")
 		return
 	}
 

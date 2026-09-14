@@ -1,0 +1,748 @@
+{
+  "commands": [
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 45,
+      "key": "start",
+      "km": "បើកម៉ឺនុយដើម",
+      "en": "Open main menu"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 46,
+      "key": "status",
+      "km": "ស្ថានភាពបង់ប្រាក់នៃបន្ទប់ទាំងអស់ក្នុងខែនេះ",
+      "en": "Payment status of all rooms this month"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 47,
+      "key": "unpaid",
+      "km": "បន្ទប់មិនទាន់បង់/បង់ខ្លះ ចុចដើម្បីទូទាត់",
+      "en": "Unpaid/partial rooms, tap to settle"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 48,
+      "key": "pay",
+      "km": "កត់ត្រាការបង់ប្រាក់",
+      "en": "Record a payment"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 49,
+      "key": "billing",
+      "km": "បន្ទប់ដែលមិនទាន់បញ្ចូលលេខទឹកភ្លេីង",
+      "en": "Rooms missing meter readings"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 50,
+      "key": "rooms",
+      "km": "មើលបញ្ជីបន្ទប់ទាំងអស់",
+      "en": "View list of all rooms"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 51,
+      "key": "setname",
+      "km": "កំណត់ឈ្មោះអ្នកជួល",
+      "en": "Set tenant name"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 52,
+      "key": "vacate",
+      "km": "អ្នកជួលផ្លាស់ចេញ",
+      "en": "Tenant moving out"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 53,
+      "key": "movein",
+      "km": "អ្នកជួលចូលនៅ",
+      "en": "Tenant moving in"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 54,
+      "key": "newmonth",
+      "km": "បើកខែគិតលុយថ្មី",
+      "en": "Open a new billing month"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 55,
+      "key": "cancel",
+      "km": "បោះបង់សកម្មភាពកំពុងធ្វើ",
+      "en": "Cancel current action"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 56,
+      "key": "help",
+      "km": "មើលពាក្យបញ្ជាទាំងអស់",
+      "en": "View all commands"
+    }
+  ],
+  "main_menu": [
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 125,
+      "key": "main_menu_header",
+      "km": "រូបូតគិតលុយ PTAS — តើអ្នកត្រូវការអ្វី?",
+      "en": "PTAS billing bot — what do you need?"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 106,
+      "key": "btn_status",
+      "km": "📊 ស្ថានភាព",
+      "en": "Status"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 107,
+      "key": "btn_unpaid",
+      "km": "💰 មិនទាន់បង់",
+      "en": "Unpaid"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 110,
+      "key": "btn_billing",
+      "km": "📋 គិតលុយ",
+      "en": "Billing"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 111,
+      "key": "btn_rooms",
+      "km": "🏠 បន្ទប់",
+      "en": "Rooms"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 114,
+      "key": "btn_pay",
+      "km": "💵 បង់ប្រាក់",
+      "en": "Pay"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 115,
+      "key": "btn_setname",
+      "km": "✏️ កំណត់ឈ្មោះ",
+      "en": "Set name"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 118,
+      "key": "btn_vacate",
+      "km": "🚪 ផ្លាស់ចេញ",
+      "en": "Move out"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 119,
+      "key": "btn_movein",
+      "km": "🔑 ចូលនៅ",
+      "en": "Move in"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 122,
+      "key": "btn_newmonth",
+      "km": "📅 ខែថ្មី",
+      "en": "New month"
+    }
+  ],
+  "room_pickers_submenu": [
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 157,
+      "key": "pick_room",
+      "km": "ជ្រើសរើសបន្ទប់៖",
+      "en": "Select a room:"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 154,
+      "key": "btn_back_main",
+      "km": "⬅️ ម៉ឺនុយដើម",
+      "en": "Back to main menu"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 182,
+      "key": "btn_back_rooms",
+      "km": "⬅️ បន្ទប់ទាំងអស់",
+      "en": "Back to all rooms"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 143,
+      "key": "room_label",
+      "km": "បន្ទប់ %d",
+      "en": "Room %d"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 212,
+      "key": "pick_which_paid",
+      "km": "តើបន្ទប់មួយណាបានបង់?",
+      "en": "Which room paid?"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 235,
+      "key": "pick_which_setname",
+      "km": "តើកំណត់ឈ្មោះឲ្យបន្ទប់មួយណា?",
+      "en": "Which room to set name for?"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 262,
+      "key": "no_occupied_rooms_for_vacate",
+      "km": "គ្រប់បន្ទប់ទំនេរអស់ហើយ។",
+      "en": "All rooms are already vacant. (shown when no occupied room remains to vacate)"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 265,
+      "key": "pick_which_vacate",
+      "km": "តើបន្ទប់មួយណាកំពុងផ្លាស់ចេញ?",
+      "en": "Which room is moving out?"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 288,
+      "key": "no_vacant_rooms_for_movein",
+      "km": "គ្មានបន្ទប់ទំនេរទេពេលនេះ។",
+      "en": "No vacant rooms right now."
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 291,
+      "key": "pick_which_movein",
+      "km": "តើអ្នកជួលថ្មីនឹងចូលនៅបន្ទប់មួយណា?",
+      "en": "Which room will the new tenant move into?"
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 198,
+      "key": "nobody_owes",
+      "km": "🎉 គ្មាននរណាជំពាក់អ្វីសម្រាប់ខែនេះទេ។",
+      "en": "Nobody owes anything this month."
+    },
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 208,
+      "key": "room_owes_amount",
+      "km": "បន្ទប់ %d — ជំពាក់ $%.2f",
+      "en": "Room %d — owes $%.2f"
+    }
+  ],
+  "room_list_status": [
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 242,
+      "key": "floor_divider",
+      "km": "— ជាន់ %d —",
+      "en": "— Floor %d —"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 271,
+      "key": "occupied",
+      "km": "✅ មានអ្នកនៅ",
+      "en": "Occupied"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 273,
+      "key": "vacant",
+      "km": "🚪 ទំនេរ",
+      "en": "Vacant"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 275,
+      "key": "room_line",
+      "km": "បន្ទប់ %d — %s — $%.0f/ខែ",
+      "en": "Room %d — [status] — $X/month"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 287,
+      "key": "everyone_paid",
+      "km": "🎉 គ្រប់គ្នាបានបង់អស់ហើយសម្រាប់ខែនេះ។",
+      "en": "Everyone has paid this month."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 302,
+      "key": "tap_to_settle",
+      "km": "ចុចលើបន្ទប់ណាមួយដើម្បីទូទាត់ចប់ (ប្រើ /pay សម្រាប់បង់ខ្លះ)៖",
+      "en": "Tap a room to settle in full (use /pay for partial):"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 342,
+      "key": "no_rooms_this_month",
+      "km": "មិនទាន់មានបន្ទប់ណាមួយសម្រាប់ខែនេះទេ។",
+      "en": "No rooms exist for this month yet."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 357,
+      "key": "paid_count",
+      "km": "%d/%d បន្ទប់បានបង់រួច។",
+      "en": "%d/%d rooms have paid."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 369,
+      "key": "all_readings_entered",
+      "km": "✅ គ្រប់បន្ទប់បានបញ្ចូលលេខម៉ែត្ររួចសម្រាប់ខែនេះ។",
+      "en": "All rooms have readings entered this month."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 382,
+      "key": "tap_to_enter_readings",
+      "km": "ចុចលើបន្ទប់ណាមួយដើម្បីបញ្ចូលលេខម៉ែត្រ៖",
+      "en": "Tap a room to enter meter readings:"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 402,
+      "key": "opened_month",
+      "km": "📅 បានបើកខែ %s ជាមួយបន្ទប់ %d។",
+      "en": "Opened month %s with %d rooms."
+    }
+  ],
+  "bill_status_line": [
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 316,
+      "key": "status_vacant",
+      "km": "🚪 បន្ទប់ %d — ទំនេរ",
+      "en": "Room %d — vacant"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 318,
+      "key": "status_no_charge",
+      "km": "➖ បន្ទប់ %d — មិនគិតលុយ",
+      "en": "Room %d — not charged"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 320,
+      "key": "status_no_readings",
+      "km": "⏳ បន្ទប់ %d — មិនទាន់បញ្ចូលលេខម៉ែត្រ",
+      "en": "Room %d — readings not entered yet"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 323,
+      "key": "status_paid_overpaid",
+      "km": "✅ បន្ទប់ %d — បានបង់ (ត្រូវបង់ $%.2f, បានទទួល $%.2f, លើស $%.2f)",
+      "en": "Room %d — paid (owed $X, received $Y, extra $Z)"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 326,
+      "key": "status_paid",
+      "km": "✅ បន្ទប់ %d — បានបង់ ($%.2f)",
+      "en": "Room %d — paid ($X)"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 328,
+      "key": "status_partial",
+      "km": "🟡 បន្ទប់ %d — បង់ខ្លះ ($%.2f នៃ $%.2f, នៅជំពាក់ $%.2f)",
+      "en": "Room %d — partial ($X of $Y, $Z still owed)"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 331,
+      "key": "status_unpaid",
+      "km": "❌ បន្ទប់ %d — មិនទាន់បង់ ($%.2f)",
+      "en": "Room %d — unpaid ($X)"
+    }
+  ],
+  "errors_usage": [
+    {
+      "file": "internal/telegram/menu.go",
+      "line": 44,
+      "key": "err_generic_prefix",
+      "km": "មានបញ្ហា៖ ",
+      "en": "Error: (reused everywhere as a prefix)"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 188,
+      "key": "cancelled",
+      "km": "បានបោះបង់។",
+      "en": "Cancelled."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 191,
+      "key": "unknown_command",
+      "km": "មិនស្គាល់ពាក្យបញ្ជានេះទេ។ សូមសាកល្បង /help។",
+      "en": "Unknown command. Try /help."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 219,
+      "key": "fully_settled",
+      "km": "✅ បានទូទាត់ចប់សព្វគ្រប់។",
+      "en": "Fully settled."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 413,
+      "key": "usage_setname",
+      "km": "របៀបប្រើ៖ /setname <លេខបន្ទប់> <ឈ្មោះ>",
+      "en": "Usage: /setname <room#> <name>"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 418,
+      "key": "room_number_must_be_integer",
+      "km": "លេខបន្ទប់ត្រូវតែជាលេខគត់។",
+      "en": "Room number must be an integer."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 425,
+      "key": "setname_done",
+      "km": "បានកំណត់ឈ្មោះបន្ទប់ %d ជា %q។",
+      "en": "Set room %d's name to %q."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 436,
+      "key": "usage_vacate",
+      "km": "របៀបប្រើ៖ /vacate <លេខបន្ទប់>",
+      "en": "Usage: /vacate <room#>"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 455,
+      "key": "usage_movein",
+      "km": "របៀបប្រើ៖ /movein <លេខបន្ទប់>",
+      "en": "Usage: /movein <room#>"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 473,
+      "key": "usage_pay",
+      "km": "របៀបប្រើ៖ /pay <លេខបន្ទប់> <ចំនួនទឹកប្រាក់>",
+      "en": "Usage: /pay <room#> <amount>"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 483,
+      "key": "amount_must_be_number",
+      "km": "ចំនួនទឹកប្រាក់ត្រូវតែជាលេខ។",
+      "en": "Amount must be a number."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 492,
+      "key": "recorded_payment",
+      "km": "💵 បានកត់ត្រា $%.2f សម្រាប់បន្ទប់ %d។",
+      "en": "Recorded $X for room %d."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 497,
+      "key": "no_billing_month",
+      "km": "មិនទាន់មានខែគិតលុយទេ — សូមប្រើ /newmonth 2026-09 សិន។",
+      "en": "No billing month yet — use /newmonth 2026-09 first. (note: hardcoded example month)"
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 500,
+      "key": "room_not_found",
+      "km": "រកមិនឃើញបន្ទប់នេះទេ។",
+      "en": "Room not found."
+    },
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 502,
+      "key": "generic_error",
+      "km": "មានបញ្ហា៖ ",
+      "en": "Error: (fallback, appends err.Error())"
+    },
+    {
+      "file": "internal/telegram/mention.go",
+      "line": 35,
+      "key": "mention_usage_hint",
+      "km": "សាកល្បង៖ @<bot> room:4 status",
+      "en": "Try: @<bot> room:4 status"
+    }
+  ],
+  "flows_service_go": [
+    {
+      "file": "internal/service/service.go",
+      "line": 126,
+      "key": "vacate_no_active_month",
+      "km": "🚪 បន្ទប់ %d ត្រូវបានកំណត់ជាទំនេរ។ មិនទាន់មានខែគិតលុយទេ ដូច្នេះគ្មានអ្វីត្រូវគិតលុយ។",
+      "en": "Room %d marked vacant. No active billing month, so nothing to charge."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 148,
+      "key": "vacate_prompt_water",
+      "km": "🚪 បន្ទប់ %d កំពុងផ្លាស់ចេញ — គិតលុយ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹក (លេខចាស់៖ %s m³)៖",
+      "en": "Room %d moving out — billing %d days this month. Enter water meter reading (previous: %s m³):"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 168,
+      "key": "movein_no_active_month",
+      "km": "🔑 បន្ទប់ %d លែងជាទំនេរហើយ។ មិនទាន់មានខែគិតលុយទេ — សូមប្រើ /newmonth រួចប្រើ /movein %d ម្តងទៀតដើម្បីកត់ត្រាលេខម៉ែត្រដើម។",
+      "en": "Room %d is no longer vacant. No active month — use /newmonth then /movein %d again to record baseline readings."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 191,
+      "key": "movein_prompt_water",
+      "km": "🔑 បន្ទប់ %d កំពុងចូលនៅ — គិតលុយ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹកបច្ចុប្បន្ន (ជាលេខដើម)៖",
+      "en": "Room %d moving in — billing %d days this month. Enter current water reading (as baseline):"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 200,
+      "key": "month_already_exists",
+      "km": "ខែ %s មានរួចហើយ",
+      "en": "Month %s already exists"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 294,
+      "key": "amount_must_be_positive",
+      "km": "ចំនួនទឹកប្រាក់ត្រូវតែធំជាងសូន្យ",
+      "en": "Amount must be greater than zero"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 302,
+      "key": "room_no_charge_no_payment",
+      "km": "បន្ទប់ %d ត្រូវបានកំណត់ជាមិនគិតលុយ — មិនចាំបាច់បង់ទេ",
+      "en": "Room %d is marked no-charge — no payment needed"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 344,
+      "key": "settled_via_unpaid_note",
+      "km": "ទូទាត់ចប់សព្វគ្រប់តាម /unpaid",
+      "en": "Payment note: Settled in full via /unpaid"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 384,
+      "key": "pay_amount_prompt",
+      "km": "💵 បន្ទប់ %d — តើគាត់បានបង់ប៉ុន្មាន? (នៅជំពាក់ $%.2f)",
+      "en": "Room %d — how much did they pay? ($X owed)"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 395,
+      "key": "pay_recorded",
+      "km": "💵 បានកត់ត្រា $%.2f សម្រាប់បន្ទប់ %d។",
+      "en": "Recorded $X for room %d."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 412,
+      "key": "setname_prompt",
+      "km": "✏️ បន្ទប់ %d — តើអ្នកជួលឈ្មោះអ្វី?",
+      "en": "Room %d — what's the tenant's name?"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 417,
+      "key": "name_required",
+      "km": "ត្រូវការឈ្មោះ — សូមព្យាយាមម្តងទៀត។",
+      "en": "Name is required — try again."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 429,
+      "key": "setname_done_svc",
+      "km": "បានកំណត់ឈ្មោះបន្ទប់ %d ជា %q។",
+      "en": "Set room %d's name to %q."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 440,
+      "key": "newmonth_label_prompt",
+      "km": "📅 តើខែថ្មីនេះមានឈ្មោះអ្វី? ឧទាហរណ៍ 2026-10",
+      "en": "What's the new month's label? e.g. 2026-10"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 445,
+      "key": "month_label_required",
+      "km": "ត្រូវការឈ្មោះខែ — សូមព្យាយាមម្តងទៀត ឧទាហរណ៍ 2026-10។",
+      "en": "Month label required — try again, e.g. 2026-10."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 488,
+      "key": "billing_prompt_water",
+      "km": "💧 បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រទឹក (លេខចាស់៖ %s m³)៖",
+      "en": "Room %d — enter water meter reading (previous: %s m³):"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 515,
+      "key": "please_enter_number_1",
+      "km": "សូមបញ្ចូលជាលេខ។",
+      "en": "Please enter a number. (parse-failure message, reused 3x)"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 521,
+      "key": "please_enter_number_2",
+      "km": "សូមបញ្ចូលជាលេខ។",
+      "en": "Please enter a number."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 527,
+      "key": "please_enter_number_3",
+      "km": "សូមបញ្ចូលជាលេខ។",
+      "en": "Please enter a number."
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 535,
+      "key": "unknown_action_kind",
+      "km": "ប្រភេទសកម្មភាពមិនស្គាល់ %q",
+      "en": "Internal error: unknown action kind %q (should never reach a user)"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 560,
+      "key": "billing_prompt_elec",
+      "km": "⚡ បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រភ្លើង (លេខចាស់៖ %s kWh)៖",
+      "en": "Room %d — enter electricity meter reading (previous: %s kWh):"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 630,
+      "key": "vacate_note_appended",
+      "km": "\n\n🚪 បន្ទប់នេះត្រូវបានកំណត់ជាទំនេរឥឡូវនេះ។",
+      "en": "This room is now marked vacant. (appended to final invoice)"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 633,
+      "key": "invoice_saved_prefix",
+      "km": "✅ បានរក្សាទុកវិក្កយបត្រ។\n\n",
+      "en": "Invoice saved. (prefix before invoice text)"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 636,
+      "key": "unknown_step",
+      "km": "ជំហានមិនស្គាល់ %q",
+      "en": "Internal error: unknown step %q"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 661,
+      "key": "movein_prompt_elec",
+      "km": "⚡ បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រភ្លើងបច្ចុប្បន្ន (ជាលេខដើម)៖",
+      "en": "Room %d — enter current electricity reading (as baseline):"
+    },
+    {
+      "file": "internal/service/service.go",
+      "line": 674,
+      "key": "movein_baseline_done",
+      "km": "✅ បន្ទប់ %d រួចរាល់ — បានកត់ត្រាលេខម៉ែត្រដើម (ទឹក %s m³, ភ្លើង %s kWh)។ វានឹងគិតលុយធម្មតានៅពេលប្រើ /billing លើកក្រោយ។",
+      "en": "Room %d done — baseline readings recorded (water Xm³, elec YkWh). Will bill normally next /billing."
+    }
+  ],
+  "invoice_template": [
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 9,
+      "key": "month_names",
+      "km": "មករា, កុម្ភៈ, មីនា, មេសា, ឧសភា, មិថុនា, កក្កដា, សីហា, កញ្ញា, តុលា, វិច្ឆិកា, ធ្នូ",
+      "en": "January .. December"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 46,
+      "key": "invoice_title",
+      "km": "វិក្កយបត្រ បន្ទប់ជួល",
+      "en": "Invoice — Rental Room"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 47,
+      "key": "invoice_month_line",
+      "km": "ខែ %s",
+      "en": "Month %s"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 48,
+      "key": "invoice_room_line",
+      "km": "បន្ទប់លេខ %d",
+      "en": "Room No. %d"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 50,
+      "key": "invoice_table_header",
+      "km": "លេខថ្មី   លេខចាស់   ចំនួន   សរុប",
+      "en": "New reading / Old reading / Qty / Total"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 51,
+      "key": "invoice_row_water",
+      "km": "ទឹក",
+      "en": "Water"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 53,
+      "key": "invoice_row_elec",
+      "km": "ភ្លើង",
+      "en": "Electricity"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 56,
+      "key": "invoice_room_rent_line",
+      "km": "ថ្លៃបន្ទប់: $%s × %d/%d ថ្ងៃ = %s ៛ ($%s)",
+      "en": "Room rent: $X × d/D days = Y riel ($Z)"
+    },
+    {
+      "file": "internal/billing/invoice.go",
+      "line": 59,
+      "key": "invoice_total_line",
+      "km": "សរុបទឹកប្រាក់: %s ៛  /  $%s",
+      "en": "Total: Y riel / $Z"
+    }
+  ],
+  "help_text": [
+    {
+      "file": "internal/telegram/bot.go",
+      "line": 515,
+      "key": "help_text_full",
+      "km": "រូបូតគិតលុយផ្ទះជួល PTAS\n\n/start បើកម៉ឺនុយសម្រាប់ធ្វើអ្វីៗខាងក្រោម — ពាក្យបញ្ជាដែលត្រូវការព័ត៌មានបន្ថែម\nអាចវាយចោលៗក៏បាន (ឧ. គ្រាន់តែ \"/pay\") ហើយវានឹងសួរម្តងមួយៗ។\n\n/status    - មើលស្ថានភាពបង់ប្រាក់នៃបន្ទប់ទាំងអស់ក្នុងខែនេះ\n/unpaid    - មើលបន្ទប់មិនទាន់បង់/បង់ខ្លះ ចុចដើម្បីទូទាត់ចប់\n/pay <លេខបន្ទប់> <ចំនួនទឹកប្រាក់> - កត់ត្រាការបង់ប្រាក់ ពេញ ឬខ្លះ\n/billing   - មើលបន្ទប់ដែលមិនទាន់បញ្ចូលលេខម៉ែត្រ ចុចដើម្បីបញ្ចូល\n/newmonth YYYY-MM - បើកខែគិតលុយថ្មី\n/rooms     - មើលបញ្ជីបន្ទប់ទាំងអស់\n/setname <លេខបន្ទប់> <ឈ្មោះ> - កំណត់ឈ្មោះអ្នកជួល\n/vacate <លេខបន្ទប់> - អ្នកជួលផ្លាស់ចេញ៖ គណនាថ្ងៃស្នាក់នៅដល់ថ្ងៃនេះស្វ័យប្រវត្តិ សួរលេខម៉ែត្រចុងក្រោយ រួចកំណត់ជាទំនេរ\n/movein <លេខបន្ទប់> - អ្នកជួលចូលនៅ៖ គណនាចំនួនថ្ងៃនៅសល់ក្នុងខែស្វ័យប្រវត្តិ សួរលេខម៉ែត្រដើម\n/cancel    - បោះបង់សកម្មភាពកំពុងធ្វើ\n\nក្នុងក្រុម សូម mention ខ្ញុំដើម្បីមើលស្ថានភាពបន្ទប់ណាមួយ (មើលបានតែប៉ុណ្ណោះ):\n@<ឈ្មោះរបស់រូបូត> room:4 status",
+      "en": "Full /help prose block, one entry per command plus group-mention usage note."
+    }
+  ]
+}

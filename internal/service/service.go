@@ -123,7 +123,7 @@ func (s *Service) StartVacateEntry(chatID int64, roomNumber int) (string, error)
 		if err := s.rooms.SetTenantName(roomNumber, ""); err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("🚪 បន្ទប់ %d ត្រូវបានកំណត់ជាទំនេរ។ មិនទាន់មានខែគិតលុយទេ ដូច្នេះគ្មានអ្វីត្រូវគិតលុយ។", room.Number), nil
+		return fmt.Sprintf("🚪 បន្ទប់ %d ឥឡូវទំនេរហើយ។ ដោយសារមិនទាន់មានការគិតលុយប្រចាំខែ ដូច្នេះមិនមានអ្វីត្រូវទូទាត់ទេ។", room.Number), nil
 	}
 	if err != nil {
 		return "", err
@@ -145,7 +145,7 @@ func (s *Service) StartVacateEntry(chatID int64, roomNumber int) (string, error)
 		return "", err
 	}
 
-	return fmt.Sprintf("🚪 បន្ទប់ %d កំពុងផ្លាស់ចេញ — គិតលុយ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹក (លេខចាស់៖ %s m³)៖",
+	return fmt.Sprintf("🚪 បន្ទប់ %d កំពុងរើចេញ — គិតថ្លៃស្នាក់នៅ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹក (លេខចាស់៖ %s m³)៖",
 		room.Number, daysStayed, trimFloat(bill.WaterPrev)), nil
 }
 
@@ -165,7 +165,7 @@ func (s *Service) StartMoveIn(chatID int64, roomNumber int) (string, error) {
 
 	period, err := s.CurrentPeriod()
 	if err == ErrNoActivePeriod {
-		return fmt.Sprintf("🔑 បន្ទប់ %d លែងជាទំនេរហើយ។ មិនទាន់មានខែគិតលុយទេ — សូមប្រើ /newmonth រួចប្រើ /movein %d ម្តងទៀតដើម្បីកត់ត្រាលេខម៉ែត្រដើម។",
+		return fmt.Sprintf("🔑 បន្ទប់ %d មានអ្នកជួលហើយ។ តែយើងមិនទាន់បើកខែគិតលុយទេ — សូមប្រើ /newmonth រួចប្រើ /movein %d ម្តងទៀតដើម្បីកត់ត្រាលេខម៉ែត្រថ្មី។",
 			room.Number, room.Number), nil
 	}
 	if err != nil {
@@ -188,7 +188,7 @@ func (s *Service) StartMoveIn(chatID int64, roomNumber int) (string, error) {
 		return "", err
 	}
 
-	return fmt.Sprintf("🔑 បន្ទប់ %d កំពុងចូលនៅ — គិតលុយ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹកបច្ចុប្បន្ន (ជាលេខដើម)៖",
+	return fmt.Sprintf("🔑 បន្ទប់ %d មានអ្នករើចូល — គិតថ្លៃស្នាក់នៅ %d ថ្ងៃសម្រាប់ខែនេះ។\n💧 សូមបញ្ចូលលេខម៉ែត្រទឹកថ្មីបច្ចុប្បន្ន៖",
 		room.Number, daysStayed), nil
 }
 
@@ -197,7 +197,7 @@ func (s *Service) StartMoveIn(chatID int64, roomNumber int) (string, error) {
 // reading forward as this period's "previous" reading.
 func (s *Service) NewMonth(label string) (int, error) {
 	if _, err := s.periods.GetByLabel(label); err == nil {
-		return 0, fmt.Errorf("ខែ %s មានរួចហើយ", label)
+		return 0, fmt.Errorf("វិក្កយបត្រខែ %s មានរួចហើយ។", label)
 	} else if err != sql.ErrNoRows {
 		return 0, err
 	}
@@ -291,7 +291,7 @@ func (s *Service) RoomsMissingReadings() ([]models.Bill, error) {
 // against it. Returns the updated bill.
 func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (models.Bill, error) {
 	if amountUSD <= 0 {
-		return models.Bill{}, fmt.Errorf("ចំនួនទឹកប្រាក់ត្រូវតែធំជាងសូន្យ")
+		return models.Bill{}, fmt.Errorf("ចំនួនទឹកប្រាក់ត្រូវតែធំជាងសូន្យ។")
 	}
 
 	bill, err := s.bills.GetByID(billID)
@@ -299,7 +299,7 @@ func (s *Service) RecordPayment(billID int64, amountUSD float64, note string) (m
 		return models.Bill{}, err
 	}
 	if bill.Status == models.BillStatusNoCharge {
-		return models.Bill{}, fmt.Errorf("បន្ទប់ %d ត្រូវបានកំណត់ជាមិនគិតលុយ — មិនចាំបាច់បង់ទេ", bill.RoomNumber)
+		return models.Bill{}, fmt.Errorf("បន្ទប់ %d ត្រូវបានកំណត់ថាមិនគិតលុយ — មិនចាំបាច់បង់ប្រាក់ទេ។", bill.RoomNumber)
 	}
 
 	if err := s.payments.Add(billID, amountUSD, note); err != nil {
@@ -341,7 +341,7 @@ func (s *Service) MarkPaid(billID int64) (models.Bill, error) {
 	if remaining <= paymentEpsilon {
 		return bill, nil
 	}
-	return s.RecordPayment(billID, remaining, "ទូទាត់ចប់សព្វគ្រប់តាម /unpaid")
+	return s.RecordPayment(billID, remaining, "បានទូទាត់រួចរាល់តាមរយៈបញ្ជា /unpaid")
 }
 
 // RoomStatus fetches a room's bill for the current period by room number —
@@ -381,7 +381,26 @@ func (s *Service) StartPayFlow(chatID int64, roomNumber int) (string, error) {
 	}); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("💵 បន្ទប់ %d — តើគាត់បានបង់ប៉ុន្មាន? (នៅជំពាក់ $%.2f)", roomNumber, bill.TotalUSD-bill.PaidUSD), nil
+	return fmt.Sprintf("💵 បន្ទប់ %d — តើគាត់បង់លុយប៉ុន្មានដែរ? (នៅខ្វះ $%.2f)", roomNumber, bill.TotalUSD-bill.PaidUSD), nil
+}
+
+// PayFull settles a room's entire remaining balance in one payment — the
+// quick "Pay full" shortcut for the common case, since a partial payment is
+// rare. It clears any pending "how much did they pay?" conversation for this
+// chat, since the button answers that question directly.
+func (s *Service) PayFull(chatID int64, roomNumber int) (models.Bill, error) {
+	bill, err := s.RoomStatus(roomNumber)
+	if err != nil {
+		return models.Bill{}, err
+	}
+	remaining := bill.TotalUSD - bill.PaidUSD
+	if remaining <= paymentEpsilon {
+		return bill, nil
+	}
+	if err := s.pending.Clear(chatID); err != nil {
+		return models.Bill{}, err
+	}
+	return s.RecordPayment(bill.ID, remaining, "")
 }
 
 func (s *Service) submitPayAmount(pa models.PendingAction, amount float64) (bool, string, error) {
@@ -392,7 +411,7 @@ func (s *Service) submitPayAmount(pa models.PendingAction, amount float64) (bool
 	if err != nil {
 		return false, "", err
 	}
-	return true, fmt.Sprintf("💵 បានកត់ត្រា $%.2f សម្រាប់បន្ទប់ %d។", amount, bill.RoomNumber), nil
+	return true, fmt.Sprintf("💵 បានទទួលប្រាក់ $%.2f ពីបន្ទប់ %d។", amount, bill.RoomNumber), nil
 }
 
 // StartSetNameFlow begins the "what name?" conversation for a room already
@@ -409,12 +428,12 @@ func (s *Service) StartSetNameFlow(chatID int64, roomNumber int) (string, error)
 	}); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("✏️ បន្ទប់ %d — តើអ្នកជួលឈ្មោះអ្វី?", roomNumber), nil
+	return fmt.Sprintf("✏️ បន្ទប់ %d — តើអ្នកជួលឈ្មោះអ្វីដែរ?", roomNumber), nil
 }
 
 func (s *Service) submitSetName(pa models.PendingAction, name string) (bool, string, error) {
 	if name == "" {
-		return false, "ត្រូវការឈ្មោះ — សូមព្យាយាមម្តងទៀត។", nil
+		return false, "សូមបញ្ជាក់ឈ្មោះ — សាកល្បងម្តងទៀត។", nil
 	}
 	room, err := s.rooms.GetByID(*pa.RoomID)
 	if err != nil {
@@ -437,12 +456,12 @@ func (s *Service) StartNewMonthFlow(chatID int64) (string, error) {
 	}); err != nil {
 		return "", err
 	}
-	return "📅 តើខែថ្មីនេះមានឈ្មោះអ្វី? ឧទាហរណ៍ 2026-10", nil
+	return "📅 តើខែថ្មីនេះមានឈ្មោះអ្វី? (ឧទាហរណ៍៖ 2026-10)", nil
 }
 
 func (s *Service) submitNewMonthLabel(pa models.PendingAction, label string) (bool, string, error) {
 	if label == "" {
-		return false, "ត្រូវការឈ្មោះខែ — សូមព្យាយាមម្តងទៀត ឧទាហរណ៍ 2026-10។", nil
+		return false, "ត្រូវការបញ្ចូលឈ្មោះខែ — សូមសាកល្បងម្តងទៀត (ឧទាហរណ៍៖ 2026-10)។", nil
 	}
 	if err := s.pending.Clear(pa.ChatID); err != nil {
 		return false, "", err
@@ -532,7 +551,7 @@ func (s *Service) SubmitTextReply(chatID int64, text string) (done bool, message
 	case "newmonth_label":
 		return s.submitNewMonthLabel(pa, strings.TrimSpace(text))
 	default:
-		return false, "", fmt.Errorf("ប្រភេទសកម្មភាពមិនស្គាល់ %q", pa.Kind)
+		return false, "", fmt.Errorf("មានបញ្ហាប្រព័ន្ធ៖ មិនស្គាល់សកម្មភាព %q", pa.Kind)
 	}
 }
 
@@ -627,13 +646,13 @@ func (s *Service) submitBillReading(pa models.PendingAction, value float64) (boo
 				_ = s.rooms.SetVacant(room.Number, true)
 				_ = s.rooms.SetTenantName(room.Number, "")
 			}
-			invoice += "\n\n🚪 បន្ទប់នេះត្រូវបានកំណត់ជាទំនេរឥឡូវនេះ។"
+			invoice += "\n\n🚪 បន្ទប់នេះឥឡូវទំនេរហើយ។"
 		}
 
 		return true, "✅ បានរក្សាទុកវិក្កយបត្រ។\n\n" + invoice, nil
 
 	default:
-		return false, "", fmt.Errorf("ជំហានមិនស្គាល់ %q", pa.Step)
+		return false, "", fmt.Errorf("មានបញ្ហាប្រព័ន្ធ៖ ជំហានមិនស្គាល់ %q", pa.Step)
 	}
 }
 
@@ -658,7 +677,7 @@ func (s *Service) submitMoveInReading(pa models.PendingAction, value float64) (b
 		if err := s.pending.Set(pa); err != nil {
 			return false, "", err
 		}
-		return false, fmt.Sprintf("⚡ បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រភ្លើងបច្ចុប្បន្ន (ជាលេខដើម)៖", bill.RoomNumber), nil
+		return false, fmt.Sprintf("⚡ បន្ទប់ %d — សូមបញ្ចូលលេខម៉ែត្រភ្លើងថ្មីបច្ចុប្បន្ន៖", bill.RoomNumber), nil
 
 	case "await_elec":
 		var stored readingPayload
@@ -671,11 +690,11 @@ func (s *Service) submitMoveInReading(pa models.PendingAction, value float64) (b
 		if err := s.pending.Clear(pa.ChatID); err != nil {
 			return false, "", err
 		}
-		return true, fmt.Sprintf("✅ បន្ទប់ %d រួចរាល់ — បានកត់ត្រាលេខម៉ែត្រដើម (ទឹក %s m³, ភ្លើង %s kWh)។ វានឹងគិតលុយធម្មតានៅពេលប្រើ /billing លើកក្រោយ។",
+		return true, fmt.Sprintf("✅ បន្ទប់ %d រួចរាល់ — បានកត់ត្រាលេខម៉ែត្រចាប់ផ្តើម (ទឹក %s m³, ភ្លើង %s kWh)។ វានឹងចាប់ផ្តើមគិតលុយធម្មតានៅពេលអ្នកប្រើ /billing លើកក្រោយ។",
 			bill.RoomNumber, trimFloat(stored.Water), trimFloat(value)), nil
 
 	default:
-		return false, "", fmt.Errorf("ជំហានមិនស្គាល់ %q", pa.Step)
+		return false, "", fmt.Errorf("មានបញ្ហាប្រព័ន្ធ៖ ជំហានមិនស្គាល់ %q", pa.Step)
 	}
 }
 

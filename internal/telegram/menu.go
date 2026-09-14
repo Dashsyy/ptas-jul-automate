@@ -41,10 +41,22 @@ func (b *Bot) handleMenuCallback(chatID int64, data string) bool {
 	case data == "menu:newmonth":
 		msg, err := b.svc.StartNewMonthFlow(chatID)
 		if err != nil {
-			b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
+			b.reply(chatID, "⚠️ មានបញ្ហាបន្តិច៖ "+err.Error())
 			return true
 		}
 		b.reply(chatID, msg)
+
+	case strings.HasPrefix(data, "flow:payfull:"):
+		roomNumber, err := strconv.Atoi(strings.TrimPrefix(data, "flow:payfull:"))
+		if err != nil {
+			return true
+		}
+		bill, err := b.svc.PayFull(chatID, roomNumber)
+		if err != nil {
+			b.reply(chatID, unwrapFriendly(err))
+			return true
+		}
+		b.reply(chatID, "✅ ទូទាត់រួចរាល់។\n"+formatBillStatus(bill))
 
 	case strings.HasPrefix(data, "flow:pay:"):
 		roomNumber, err := strconv.Atoi(strings.TrimPrefix(data, "flow:pay:"))
@@ -56,7 +68,7 @@ func (b *Bot) handleMenuCallback(chatID int64, data string) bool {
 			b.reply(chatID, unwrapFriendly(err))
 			return true
 		}
-		b.reply(chatID, msg)
+		b.sendPayPrompt(chatID, roomNumber, msg)
 
 	case strings.HasPrefix(data, "flow:setname:"):
 		roomNumber, err := strconv.Atoi(strings.TrimPrefix(data, "flow:setname:"))
@@ -104,7 +116,7 @@ func (b *Bot) showMainMenu(chatID int64) {
 	rows := [][]tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("📊 ស្ថានភាព", "menu:status"),
-			tgbotapi.NewInlineKeyboardButtonData("💰 មិនទាន់បង់", "menu:unpaid"),
+			tgbotapi.NewInlineKeyboardButtonData("💰 នៅជំពាក់", "menu:unpaid"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("📋 គិតលុយ", "menu:billing"),
@@ -112,17 +124,17 @@ func (b *Bot) showMainMenu(chatID int64) {
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("💵 បង់ប្រាក់", "menu:pay"),
-			tgbotapi.NewInlineKeyboardButtonData("✏️ កំណត់ឈ្មោះ", "menu:setname"),
+			tgbotapi.NewInlineKeyboardButtonData("✏️ ដាក់ឈ្មោះ", "menu:setname"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🚪 ផ្លាស់ចេញ", "menu:vacate"),
-			tgbotapi.NewInlineKeyboardButtonData("🔑 ចូលនៅ", "menu:movein"),
+			tgbotapi.NewInlineKeyboardButtonData("🚪 រើចេញ", "menu:vacate"),
+			tgbotapi.NewInlineKeyboardButtonData("🔑 រើចូល", "menu:movein"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("📅 ខែថ្មី", "menu:newmonth"),
 		),
 	}
-	msg := tgbotapi.NewMessage(chatID, "រូបូតគិតលុយ PTAS — តើអ្នកត្រូវការអ្វី?")
+	msg := tgbotapi.NewMessage(chatID, "ជំរាបសួរពី PTAS Bot! 👋 តើថ្ងៃនេះមានអ្វីឲ្យខ្ញុំជួយ?")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -132,7 +144,7 @@ func (b *Bot) showMainMenu(chatID int64) {
 func (b *Bot) showRoomPicker(chatID int64) {
 	rooms, err := b.svc.ListRooms()
 	if err != nil {
-		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
+		b.reply(chatID, "⚠️ មានបញ្ហាបន្តិច៖ "+err.Error())
 		return
 	}
 
@@ -140,7 +152,7 @@ func (b *Bot) showRoomPicker(chatID int64) {
 	lastFloor := 0
 	for _, r := range rooms {
 		rows = append(rows, floorBreakerRow(&lastFloor, r.Floor)...)
-		label := fmt.Sprintf("បន្ទប់ %d", r.Number)
+		label := fmt.Sprintf("បន្ទប់ទី %d", r.Number)
 		if r.IsVacant {
 			label += " 🚪"
 		} else if r.TenantName != "" {
@@ -151,10 +163,10 @@ func (b *Bot) showRoomPicker(chatID int64) {
 		))
 	}
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("⬅️ ម៉ឺនុយដើម", "menu:main"),
+		tgbotapi.NewInlineKeyboardButtonData("⬅️ ត្រឡប់ទៅម៉ឺនុយដើម", "menu:main"),
 	))
 
-	msg := tgbotapi.NewMessage(chatID, "ជ្រើសរើសបន្ទប់៖")
+	msg := tgbotapi.NewMessage(chatID, "សូមជ្រើសរើសបន្ទប់៖")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -166,25 +178,45 @@ func (b *Bot) showRoomSubmenu(chatID int64, roomNumber int) {
 	if bill, err := b.svc.RoomStatus(roomNumber); err == nil {
 		status = formatBillStatus(bill)
 	} else {
-		status = fmt.Sprintf("បន្ទប់ %d", roomNumber)
+		status = fmt.Sprintf("បន្ទប់ទី %d", roomNumber)
 	}
 
 	rows := [][]tgbotapi.InlineKeyboardButton{
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("💵 បង់ប្រាក់", fmt.Sprintf("flow:pay:%d", roomNumber)),
-			tgbotapi.NewInlineKeyboardButtonData("✏️ កំណត់ឈ្មោះ", fmt.Sprintf("flow:setname:%d", roomNumber)),
+			tgbotapi.NewInlineKeyboardButtonData("✏️ ដាក់ឈ្មោះ", fmt.Sprintf("flow:setname:%d", roomNumber)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🚪 ផ្លាស់ចេញ", fmt.Sprintf("flow:vacate:%d", roomNumber)),
-			tgbotapi.NewInlineKeyboardButtonData("🔑 ចូលនៅ", fmt.Sprintf("flow:movein:%d", roomNumber)),
+			tgbotapi.NewInlineKeyboardButtonData("🚪 រើចេញ", fmt.Sprintf("flow:vacate:%d", roomNumber)),
+			tgbotapi.NewInlineKeyboardButtonData("🔑 រើចូល", fmt.Sprintf("flow:movein:%d", roomNumber)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⬅️ បន្ទប់ទាំងអស់", "menu:rooms"),
-			tgbotapi.NewInlineKeyboardButtonData("⬅️ ម៉ឺនុយដើម", "menu:main"),
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ ត្រឡប់ទៅបន្ទប់ទាំងអស់", "menu:rooms"),
+			tgbotapi.NewInlineKeyboardButtonData("⬅️ ត្រឡប់ទៅម៉ឺនុយដើម", "menu:main"),
 		),
 	}
 	msg := tgbotapi.NewMessage(chatID, status)
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
+	b.send(msg)
+}
+
+// sendPayPrompt shows the "how much did they pay?" prompt with a "Pay full"
+// quick-reply button attached — most tenants pay in full, so this saves them
+// typing the exact amount, while the pending "pay_amount" action set by
+// StartPayFlow still accepts a typed number for the rarer partial payment.
+func (b *Bot) sendPayPrompt(chatID int64, roomNumber int, prompt string) {
+	msg := tgbotapi.NewMessage(chatID, prompt)
+	if bill, err := b.svc.RoomStatus(roomNumber); err == nil {
+		if remaining := bill.TotalUSD - bill.PaidUSD; remaining > 0.01 {
+			msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData(
+						fmt.Sprintf("✅ បង់ពេញ ($%.2f)", remaining),
+						fmt.Sprintf("flow:payfull:%d", roomNumber)),
+				),
+			)
+		}
+	}
 	b.send(msg)
 }
 
@@ -195,7 +227,7 @@ func (b *Bot) showPayPicker(chatID int64) {
 		return
 	}
 	if len(bills) == 0 {
-		b.reply(chatID, "🎉 គ្មាននរណាជំពាក់អ្វីសម្រាប់ខែនេះទេ។")
+		b.reply(chatID, "🎉 អបអរសាទរ! គ្មានបន្ទប់ណាជំពាក់លុយទេខែនេះ។")
 		return
 	}
 	var rows [][]tgbotapi.InlineKeyboardButton
@@ -209,7 +241,7 @@ func (b *Bot) showPayPicker(chatID int64) {
 				fmt.Sprintf("flow:pay:%d", bl.RoomNumber)),
 		))
 	}
-	msg := tgbotapi.NewMessage(chatID, "តើបន្ទប់មួយណាបានបង់?")
+	msg := tgbotapi.NewMessage(chatID, "តើបន្ទប់លេខប៉ុន្មានដែលបានបង់លុយ?")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -217,14 +249,14 @@ func (b *Bot) showPayPicker(chatID int64) {
 func (b *Bot) showSetNamePicker(chatID int64) {
 	rooms, err := b.svc.ListRooms()
 	if err != nil {
-		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
+		b.reply(chatID, "⚠️ មានបញ្ហាបន្តិច៖ "+err.Error())
 		return
 	}
 	var rows [][]tgbotapi.InlineKeyboardButton
 	lastFloor := 0
 	for _, r := range rooms {
 		rows = append(rows, floorBreakerRow(&lastFloor, r.Floor)...)
-		label := fmt.Sprintf("បន្ទប់ %d", r.Number)
+		label := fmt.Sprintf("បន្ទប់ទី %d", r.Number)
 		if r.TenantName != "" {
 			label += " — " + r.TenantName
 		}
@@ -232,7 +264,7 @@ func (b *Bot) showSetNamePicker(chatID int64) {
 			tgbotapi.NewInlineKeyboardButtonData(label, fmt.Sprintf("flow:setname:%d", r.Number)),
 		))
 	}
-	msg := tgbotapi.NewMessage(chatID, "តើកំណត់ឈ្មោះឲ្យបន្ទប់មួយណា?")
+	msg := tgbotapi.NewMessage(chatID, "តើអ្នកចង់ដាក់ឈ្មោះឲ្យបន្ទប់មួយណា?")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -240,7 +272,7 @@ func (b *Bot) showSetNamePicker(chatID int64) {
 func (b *Bot) showVacatePicker(chatID int64) {
 	rooms, err := b.svc.ListRooms()
 	if err != nil {
-		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
+		b.reply(chatID, "⚠️ មានបញ្ហាបន្តិច៖ "+err.Error())
 		return
 	}
 	var rows [][]tgbotapi.InlineKeyboardButton
@@ -250,7 +282,7 @@ func (b *Bot) showVacatePicker(chatID int64) {
 			continue
 		}
 		rows = append(rows, floorBreakerRow(&lastFloor, r.Floor)...)
-		label := fmt.Sprintf("បន្ទប់ %d", r.Number)
+		label := fmt.Sprintf("បន្ទប់ទី %d", r.Number)
 		if r.TenantName != "" {
 			label += " — " + r.TenantName
 		}
@@ -259,10 +291,10 @@ func (b *Bot) showVacatePicker(chatID int64) {
 		))
 	}
 	if len(rows) == 0 {
-		b.reply(chatID, "គ្រប់បន្ទប់ទំនេរអស់ហើយ។")
+		b.reply(chatID, "គ្រប់បន្ទប់ទំនេរអស់ហើយពេលនេះ។")
 		return
 	}
-	msg := tgbotapi.NewMessage(chatID, "តើបន្ទប់មួយណាកំពុងផ្លាស់ចេញ?")
+	msg := tgbotapi.NewMessage(chatID, "តើអ្នកជួលបន្ទប់មួយណាកំពុងរើចេញ?")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }
@@ -270,7 +302,7 @@ func (b *Bot) showVacatePicker(chatID int64) {
 func (b *Bot) showMoveInPicker(chatID int64) {
 	rooms, err := b.svc.ListRooms()
 	if err != nil {
-		b.reply(chatID, "មានបញ្ហា៖ "+err.Error())
+		b.reply(chatID, "⚠️ មានបញ្ហាបន្តិច៖ "+err.Error())
 		return
 	}
 	var rows [][]tgbotapi.InlineKeyboardButton
@@ -281,14 +313,14 @@ func (b *Bot) showMoveInPicker(chatID int64) {
 		}
 		rows = append(rows, floorBreakerRow(&lastFloor, r.Floor)...)
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("បន្ទប់ %d", r.Number), fmt.Sprintf("flow:movein:%d", r.Number)),
+			tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("បន្ទប់ទី %d", r.Number), fmt.Sprintf("flow:movein:%d", r.Number)),
 		))
 	}
 	if len(rows) == 0 {
-		b.reply(chatID, "គ្មានបន្ទប់ទំនេរទេពេលនេះ។")
+		b.reply(chatID, "សុំទោស គ្មានបន្ទប់ទំនេរទេពេលនេះ។")
 		return
 	}
-	msg := tgbotapi.NewMessage(chatID, "តើអ្នកជួលថ្មីនឹងចូលនៅបន្ទប់មួយណា?")
+	msg := tgbotapi.NewMessage(chatID, "តើអ្នកជួលថ្មីនឹងស្នាក់នៅបន្ទប់មួយណា?")
 	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.send(msg)
 }

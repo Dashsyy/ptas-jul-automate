@@ -43,11 +43,11 @@ type InvoiceInput struct {
 func RenderKhmerInvoice(in InvoiceInput) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "វិក្កយបត្រ បន្ទប់ជួល\n")
-	fmt.Fprintf(&b, "ខែ %s\n\n", in.PeriodLabel)
+	fmt.Fprintf(&b, "វិក្កយបត្របន្ទប់ជួល\n")
+	fmt.Fprintf(&b, "ប្រចាំខែ %s\n\n", in.PeriodLabel)
 	fmt.Fprintf(&b, "បន្ទប់លេខ %d\n\n", in.RoomNumber)
 
-	fmt.Fprintf(&b, "         លេខថ្មី   លេខចាស់   ចំនួន   សរុប\n")
+	fmt.Fprintf(&b, "លេខថ្មី  | លេខចាស់ | ចំនួន | សរុប\n")
 	fmt.Fprintf(&b, "ទឹក      %-8s %-8s %-6s %s ៛\n",
 		fmtNum(in.WaterCurr), fmtNum(in.WaterPrev), fmtNum(in.WaterUsed), fmtRiel(in.WaterCost))
 	fmt.Fprintf(&b, "ភ្លើង     %-8s %-8s %-6s %s ៛\n\n",
