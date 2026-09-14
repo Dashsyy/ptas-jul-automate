@@ -120,7 +120,7 @@ func StatusNoCharge(roomNumber int) string {
 }
 
 func StatusNoReadings(roomNumber int) string {
-	return fmt.Sprintf("⏳ បន្ទប់ %d — រង់ចាំកត់លេខម៉ែត្រ", roomNumber)
+	return fmt.Sprintf("⏳ បន្ទប់ %d — រង់ចាំកត់លេខទឹកភ្លើង", roomNumber)
 }
 
 func StatusPaidWithOverpay(roomNumber int, total, paid, extra float64) string {
