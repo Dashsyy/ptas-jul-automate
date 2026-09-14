@@ -14,6 +14,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"ptas-bot/internal/i18n"
+	"ptas-bot/internal/kmnum"
 	"ptas-bot/internal/models"
 	"ptas-bot/internal/service"
 )
@@ -384,6 +385,7 @@ func (b *Bot) sendMissingReadingsList(chatID int64) {
 }
 
 func (b *Bot) doNewMonth(chatID int64, label string) {
+	label = kmnum.ToArabic(label)
 	if label == "" {
 		msg, err := b.svc.StartNewMonthFlow(chatID)
 		if err != nil {
@@ -412,7 +414,7 @@ func (b *Bot) doSetName(chatID int64, args string) {
 		b.reply(chatID, i18n.UsageSetName)
 		return
 	}
-	roomNumber, err := strconv.Atoi(parts[0])
+	roomNumber, err := strconv.Atoi(kmnum.ToArabic(parts[0]))
 	if err != nil {
 		b.reply(chatID, i18n.RoomNumberMustBeInt)
 		return
@@ -430,7 +432,7 @@ func (b *Bot) doVacate(chatID int64, args string) {
 		b.showVacatePicker(chatID)
 		return
 	}
-	roomNumber, err := strconv.Atoi(args)
+	roomNumber, err := strconv.Atoi(kmnum.ToArabic(args))
 	if err != nil {
 		b.reply(chatID, i18n.UsageVacate)
 		return
@@ -449,7 +451,7 @@ func (b *Bot) doMoveIn(chatID int64, args string) {
 		b.showMoveInPicker(chatID)
 		return
 	}
-	roomNumber, err := strconv.Atoi(args)
+	roomNumber, err := strconv.Atoi(kmnum.ToArabic(args))
 	if err != nil {
 		b.reply(chatID, i18n.UsageMoveIn)
 		return
@@ -472,12 +474,12 @@ func (b *Bot) doPay(chatID int64, args string) {
 		b.reply(chatID, i18n.UsagePay)
 		return
 	}
-	roomNumber, err := strconv.Atoi(parts[0])
+	roomNumber, err := strconv.Atoi(kmnum.ToArabic(parts[0]))
 	if err != nil {
 		b.reply(chatID, i18n.RoomNumberMustBeInt)
 		return
 	}
-	amount, err := strconv.ParseFloat(parts[1], 64)
+	amount, err := strconv.ParseFloat(kmnum.ToArabic(parts[1]), 64)
 	if err != nil {
 		b.reply(chatID, i18n.AmountMustBeNumber)
 		return

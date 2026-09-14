@@ -8,9 +8,14 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
 	"ptas-bot/internal/i18n"
+	"ptas-bot/internal/kmnum"
 )
 
-var roomQueryRe = regexp.MustCompile(`(?i)room\s*[:#]?\s*(\d+)`)
+// roomQueryRe matches a room number in either Arabic (0-9) or Khmer (០-៩)
+// digits — Khmer keyboards commonly substitute Khmer numerals for typed
+// Arabic ones, so a query like "room:៥ status" must parse the same as
+// "room:5 status".
+var roomQueryRe = regexp.MustCompile(`(?i)room\s*[:#]?\s*([0-9\x{17E0}-\x{17E9}]+)`)
 
 // mentionQuery reports whether the bot is @mentioned in msg and, if so,
 // returns the text following the mention. Telegram delivers @mentions to a
@@ -38,7 +43,7 @@ func (b *Bot) handleMention(chatID int64, query string) {
 		return
 	}
 
-	roomNumber, err := strconv.Atoi(m[1])
+	roomNumber, err := strconv.Atoi(kmnum.ToArabic(m[1]))
 	if err != nil {
 		return
 	}

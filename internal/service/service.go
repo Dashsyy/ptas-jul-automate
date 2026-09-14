@@ -17,6 +17,7 @@ import (
 
 	"ptas-bot/internal/billing"
 	"ptas-bot/internal/i18n"
+	"ptas-bot/internal/kmnum"
 	"ptas-bot/internal/models"
 	"ptas-bot/internal/store"
 )
@@ -523,6 +524,11 @@ func (s *Service) SubmitTextReply(chatID int64, text string) (done bool, message
 	if err != nil {
 		return false, "", err
 	}
+
+	// Khmer keyboards commonly produce Khmer numerals (០-៩) instead of
+	// Arabic ones; normalize before any parsing below so a meter reading,
+	// amount, or month label typed that way still works.
+	text = kmnum.ToArabic(text)
 
 	switch pa.Kind {
 	case "enter_readings", "vacate_readings":
