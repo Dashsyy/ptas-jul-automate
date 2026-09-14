@@ -20,7 +20,11 @@ import (
 // notification — either it's unrelated text, or ABA changed its format.
 var ErrNoMatch = errors.New("text doesn't look like an ABA PayWay payment notification")
 
-var pattern = regexp.MustCompile(`(?i)\$\s*([\d,]+\.\d{2})\s+paid by\s+(.+?)\s+\(\*?(\w+)\)\s+on\s+(.+?)\s+via\s+(.+?)\s+\((.+?)\)\s+at\s+(.+?)\.\s*trx\.?\s*id:?\s*(\d+),\s*apv:?\s*(\d+)`)
+// The bank name in parentheses after the payment method is only present for
+// some methods (e.g. "via ABA KHQR (ACLEDA Bank Plc.)" but plain
+// "via ABA PAY at ..." with none), and the amount may or may not carry
+// decimal places (e.g. "$66.50" vs "$222,000") — both are optional here.
+var pattern = regexp.MustCompile(`(?i)\$\s*([\d,]+(?:\.\d{1,2})?)\s+paid by\s+(.+?)\s+\(\*?(\w+)\)\s+on\s+(.+?)\s+via\s+([^()]+?)(?:\s*\(([^()]+)\))?\s+at\s+(.+?)\.\s*trx\.?\s*id:?\s*(\d+),\s*apv:?\s*(\d+)`)
 
 // Notification holds the fields pulled out of one ABA PayWay message.
 type Notification struct {

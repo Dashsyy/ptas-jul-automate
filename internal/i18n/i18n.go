@@ -15,20 +15,20 @@ import "fmt"
 // names themselves stay in English/ASCII since Telegram requires that, but
 // their autocomplete descriptions are Khmer). ----
 const (
-	CmdStart    = "បើកម៉ឺនុយដើម"
-	CmdStatus   = "របាយការណ៍បង់ប្រាក់ប្រចាំខែ"
-	CmdUnpaid   = "បន្ទប់ជំពាក់ (ចុចដើម្បីទូទាត់)"
-	CmdPay      = "កត់ត្រាការបង់ប្រាក់"
-	CmdBilling  = "បន្ទប់មិនទាន់កត់លេខម៉ែត្រ"
-	CmdRooms    = "មើលបញ្ជីបន្ទប់ទាំងអស់"
-	CmdSetName  = "ដាក់ឈ្មោះអ្នកជួល"
-	CmdVacate   = "កត់ត្រាអ្នករើចេញ"
-	CmdMoveIn   = "កត់ត្រាអ្នករើចូល"
+	CmdStart      = "បើកម៉ឺនុយដើម"
+	CmdStatus     = "របាយការណ៍បង់ប្រាក់ប្រចាំខែ"
+	CmdUnpaid     = "បន្ទប់ជំពាក់ (ចុចដើម្បីទូទាត់)"
+	CmdPay        = "កត់ត្រាការបង់ប្រាក់"
+	CmdBilling    = "បន្ទប់មិនទាន់កត់លេខម៉ែត្រ"
+	CmdRooms      = "មើលបញ្ជីបន្ទប់ទាំងអស់"
+	CmdSetName    = "ដាក់ឈ្មោះអ្នកជួល"
+	CmdVacate     = "កត់ត្រាអ្នករើចេញ"
+	CmdMoveIn     = "កត់ត្រាអ្នករើចូល"
 	CmdNewMonth   = "បង្កើតវិក្កយបត្រខែថ្មី"
 	CmdTotal      = "សរុបលុយប្រចាំខែ"
 	CmdUpdateInfo = "នាំចូលការទូទាត់ពីសារ ABA PayWay (reply ទៅសារនោះ)"
 	CmdCancel     = "បោះបង់"
-	CmdHelp     = "របៀបប្រើប្រាស់រូបូត"
+	CmdHelp       = "របៀបប្រើប្រាស់រូបូត"
 )
 
 // ---- Main menu (the BotFather-style /start screen) ----
@@ -366,10 +366,8 @@ const HelpText = `🤖 ជំនួយការ PTAS Bot សម្រាប់�
 /setname <បន្ទប់> <ឈ្មោះ> - ដាក់ឈ្មោះអ្នកជួល
 /vacate <បន្ទប់> - កត់ត្រាអ្នករើចេញ៖ គណនាថ្ងៃស្នាក់នៅ និងសួរលេខម៉ែត្រចុងក្រោយ
 /movein <បន្ទប់> - កត់ត្រាអ្នករើចូល៖ សួរលេខម៉ែត្រថ្មី ដើម្បីចាប់ផ្តើមគិតលុយ
+/update_info room <បន្ទប់> - reply ទៅសារជូនដំណឹង ABA PayWay ដែល Forward មក ខ្ញុំនឹងអានចំនួនទឹកប្រាក់ ហើយកត់ត្រាការបង់ប្រាក់ជូនភ្លាម
 /cancel    - បោះបង់ប្រតិបត្តិការបច្ចុប្បន្ន
 
 💡 នៅក្នុងគ្រុប អ្នកអាច mention ឈ្មោះខ្ញុំ ដើម្បីឆែកស្ថានភាពបន្ទប់បានយ៉ាងរហ័ស។
-ឧទាហរណ៍៖ @<bot> room:4 status
-
-💡 ទទួលបានសារជូនដំណឹង ABA PayWay? Forward សារនោះមកបញ្ចូល រួច reply វាដោយវាយ
-@<bot> update_info room 4 — ខ្ញុំនឹងអានចំនួនទឹកប្រាក់ និងកត់ត្រាការបង់ប្រាក់ជូនភ្លាម។`
+ឧទាហរណ៍៖ @<bot> room:4 status`
