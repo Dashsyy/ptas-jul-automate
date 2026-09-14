@@ -24,9 +24,10 @@ const (
 	CmdSetName  = "ដាក់ឈ្មោះអ្នកជួល"
 	CmdVacate   = "កត់ត្រាអ្នករើចេញ"
 	CmdMoveIn   = "កត់ត្រាអ្នករើចូល"
-	CmdNewMonth = "បង្កើតវិក្កយបត្រខែថ្មី"
-	CmdTotal    = "សរុបលុយប្រចាំខែ"
-	CmdCancel   = "បោះបង់"
+	CmdNewMonth   = "បង្កើតវិក្កយបត្រខែថ្មី"
+	CmdTotal      = "សរុបលុយប្រចាំខែ"
+	CmdUpdateInfo = "នាំចូលការទូទាត់ពីសារ ABA PayWay (reply ទៅសារនោះ)"
+	CmdCancel     = "បោះបង់"
 	CmdHelp     = "របៀបប្រើប្រាស់រូបូត"
 )
 
@@ -195,10 +196,11 @@ func MentionUsageHint(username string) string {
 	return "សាកល្បងប្រើ៖ @" + username + " room:4 status"
 }
 
-// UpdateInfoUsageHint is shown when a "update_info" mention doesn't include
-// a recognizable room number.
+// UpdateInfoUsageHint is shown when "update_info" doesn't include a
+// recognizable room number, whether invoked as /update_info in a DM or as
+// an @mention in a group.
 func UpdateInfoUsageHint(username string) string {
-	return "សូមប្រើទម្រង់៖ @" + username + " update_info room 4 — ព្រមទាំង reply ទៅសារជូនដំណឹង ABA PayWay ដើម។"
+	return "សូមប្រើទម្រង់៖ /update_info room 4 (ឬ @" + username + " update_info room 4 ក្នុងក្រុម) — ព្រមទាំង reply ទៅសារជូនដំណឹង ABA PayWay ដើម។"
 }
 
 // UpdateInfoNeedsReply is shown when "update_info" is used without replying

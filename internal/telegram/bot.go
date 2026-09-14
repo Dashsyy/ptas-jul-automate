@@ -55,6 +55,7 @@ var commandList = []tgbotapi.BotCommand{
 	{Command: "movein", Description: i18n.CmdMoveIn},
 	{Command: "newmonth", Description: i18n.CmdNewMonth},
 	{Command: "total", Description: i18n.CmdTotal},
+	{Command: "update_info", Description: i18n.CmdUpdateInfo},
 	{Command: "cancel", Description: i18n.CmdCancel},
 	{Command: "help", Description: i18n.CmdHelp},
 }
@@ -128,7 +129,7 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 	}
 
 	if msg.IsCommand() {
-		b.handleCommand(chatID, msg.Command(), msg.CommandArguments())
+		b.handleCommand(msg, msg.Command(), msg.CommandArguments())
 		return
 	}
 
@@ -151,8 +152,9 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 	b.reply(chatID, out)
 }
 
-func (b *Bot) handleCommand(chatID int64, cmd, args string) {
-	switch cmd {
+func (b *Bot) handleCommand(msg *tgbotapi.Message, cmd, args string) {
+	chatID := msg.Chat.ID
+	switch strings.ToLower(cmd) {
 	case "start":
 		b.showMainMenu(chatID)
 
@@ -176,6 +178,9 @@ func (b *Bot) handleCommand(chatID int64, cmd, args string) {
 
 	case "total":
 		b.sendMonthlyTotal(chatID)
+
+	case "update_info":
+		b.updateInfoFromReply(chatID, msg.ReplyToMessage, args)
 
 	case "pay":
 		b.doPay(chatID, args)

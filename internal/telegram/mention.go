@@ -43,7 +43,7 @@ func (b *Bot) mentionQuery(msg *tgbotapi.Message) (string, bool) {
 // DM, and only from the owner.
 func (b *Bot) handleMention(msg *tgbotapi.Message, query string) {
 	if updateInfoRe.MatchString(query) {
-		b.handleUpdateInfo(msg, query)
+		b.updateInfoFromReply(msg.Chat.ID, msg.ReplyToMessage, query)
 		return
 	}
 
@@ -66,16 +66,16 @@ func (b *Bot) handleMention(msg *tgbotapi.Message, query string) {
 	b.reply(chatID, formatBillStatus(bill))
 }
 
-// handleUpdateInfo records a payment by parsing the ABA PayWay notification
-// the mention is a reply to. The intended flow: forward the ABA PayWay
-// notification into the chat, then reply to it with
-// "@<bot> update_info room 4" — the bot reads the forwarded message's
-// amount and payer, and records the payment against room 4 with the
-// payer's name and transaction ID kept as the payment's note.
-func (b *Bot) handleUpdateInfo(msg *tgbotapi.Message, query string) {
-	chatID := msg.Chat.ID
-
-	m := roomQueryRe.FindStringSubmatch(query)
+// updateInfoFromReply records a payment by parsing the ABA PayWay
+// notification replyTo holds. The intended flow: forward the ABA PayWay
+// notification into the chat, then reply to it with either
+// "/update_info room 4" (in a private DM) or "@<bot> update_info room 4"
+// (in a group) — the bot reads the forwarded message's amount and payer,
+// and records the payment against room 4 with the payer's name and
+// transaction ID kept as the payment's note. argsText is whatever followed
+// the command/mention — just needs to contain a "room <n>" somewhere.
+func (b *Bot) updateInfoFromReply(chatID int64, replyTo *tgbotapi.Message, argsText string) {
+	m := roomQueryRe.FindStringSubmatch(argsText)
 	if m == nil {
 		b.reply(chatID, i18n.UpdateInfoUsageHint(b.username))
 		return
@@ -86,12 +86,12 @@ func (b *Bot) handleUpdateInfo(msg *tgbotapi.Message, query string) {
 		return
 	}
 
-	if msg.ReplyToMessage == nil || msg.ReplyToMessage.Text == "" {
+	if replyTo == nil || replyTo.Text == "" {
 		b.reply(chatID, i18n.UpdateInfoNeedsReply)
 		return
 	}
 
-	notif, err := abapay.Parse(msg.ReplyToMessage.Text)
+	notif, err := abapay.Parse(replyTo.Text)
 	if err != nil {
 		b.reply(chatID, i18n.UpdateInfoParseFailed)
 		return
